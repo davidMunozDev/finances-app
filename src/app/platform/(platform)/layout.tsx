@@ -2,9 +2,9 @@
 
 import { ReactNode } from "react";
 import { Box } from "@mui/material";
-import Header from "@/components/ui/Header";
-import Footer from "@/components/ui/Footer";
-import DesktopSidebar from "@/components/ui/DesktopSidebar";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import DesktopSidebar from "@/components/DesktopSidebar";
 
 const DRAWER_WIDTH = 280;
 

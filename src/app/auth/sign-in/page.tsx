@@ -11,7 +11,7 @@ import {
   RoundedButton,
   AuthCard,
   Logo,
-} from "@/components/ui";
+} from "@/components";
 import { useRouter } from "next/navigation";
 import { PATHS } from "@/config/paths";
 
@@ -42,8 +42,7 @@ export default function SignInPage() {
     console.log("Login data:", data);
     // Simular un delay
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    // Navegar a la página del dashboard
-    router.push(PATHS.HOME);
+    router.push(PATHS.ONBOARDING.USER);
   };
 
   return (

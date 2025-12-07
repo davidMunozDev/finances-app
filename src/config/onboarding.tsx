@@ -1,0 +1,86 @@
+import {
+  PersonOutline,
+  AccountBalanceWalletOutlined,
+  TrendingUpOutlined,
+  TrendingDownOutlined,
+  AssessmentOutlined,
+} from "@mui/icons-material";
+import { PATHS } from "./paths";
+
+export interface OnboardingStep {
+  id: string;
+  label: string;
+  title: string;
+  description: string;
+  path: string;
+  icon: React.ComponentType;
+}
+
+export const ONBOARDING_STEPS: OnboardingStep[] = [
+  {
+    id: "user",
+    label: "Usuario",
+    title: "Configura tu perfil",
+    description: "Completa tu información personal",
+    path: PATHS.ONBOARDING.USER,
+    icon: PersonOutline,
+  },
+  {
+    id: "budget",
+    label: "Presupuesto",
+    title: "Crea tu primer presupuesto",
+    description: "Define cuánto quieres gastar este mes",
+    path: PATHS.ONBOARDING.BUDGET,
+    icon: AccountBalanceWalletOutlined,
+  },
+  {
+    id: "incomes",
+    label: "Ingresos",
+    title: "Registra tus ingresos",
+    description: "Añade tus fuentes de ingreso",
+    path: PATHS.ONBOARDING.INCOMES,
+    icon: TrendingUpOutlined,
+  },
+  {
+    id: "outcomes",
+    label: "Gastos",
+    title: "Registra tus gastos",
+    description: "Añade tus gastos principales",
+    path: PATHS.ONBOARDING.OUTCOMES,
+    icon: TrendingDownOutlined,
+  },
+  {
+    id: "summary",
+    label: "Resumen",
+    title: "Resumen final",
+    description: "Revisa toda tu información",
+    path: PATHS.ONBOARDING.SUMMARY,
+    icon: AssessmentOutlined,
+  },
+];
+
+export const getStepIndex = (stepId: string): number => {
+  return ONBOARDING_STEPS.findIndex((step) => step.id === stepId);
+};
+
+export const getStepById = (stepId: string): OnboardingStep | undefined => {
+  return ONBOARDING_STEPS.find((step) => step.id === stepId);
+};
+
+export const getNextStep = (currentStepId: string): OnboardingStep | null => {
+  const currentIndex = getStepIndex(currentStepId);
+  if (currentIndex === -1 || currentIndex === ONBOARDING_STEPS.length - 1) {
+    return null;
+  }
+  return ONBOARDING_STEPS[currentIndex + 1];
+};
+
+export const getPreviousStep = (
+  currentStepId: string
+): OnboardingStep | null => {
+  const currentIndex = getStepIndex(currentStepId);
+  if (currentIndex <= 0) {
+    return null;
+  }
+  return ONBOARDING_STEPS[currentIndex - 1];
+};

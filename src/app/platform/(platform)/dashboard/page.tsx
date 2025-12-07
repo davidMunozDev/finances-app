@@ -1,6 +1,6 @@
 "use client";
 
-export default function Home() {
+export default function Dashboard() {
   return (
     <div>
       <h1>Home</h1>

@@ -1,20 +1,10 @@
 "use client";
 
-import {
-  Select,
-  MenuItem,
-  FormControl,
-  Typography,
-  Box,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
+import { Select, MenuItem, FormControl, Typography } from "@mui/material";
 import { KeyboardArrowDown } from "@mui/icons-material";
 import { useState } from "react";
 
 export default function BudgetSelector() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [selectedBudget, setSelectedBudget] = useState("Hogar");
 
   // Datos de ejemplo - reemplazar con datos reales
