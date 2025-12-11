@@ -37,7 +37,9 @@ export default function OnboardingMobileHeader({
             color: "#fff",
           }}
         >
-          {currentStep?.icon && <currentStep.icon sx={{ fontSize: 20 }} />}
+          {currentStep?.icon && (
+            <Box component={currentStep.icon} sx={{ fontSize: 20 }} />
+          )}
         </Box>
         <Box sx={{ flex: 1 }}>
           <Typography

@@ -107,7 +107,7 @@ export default function OnboardingSidebar({
                     : "none",
                 }}
               >
-                <StepIcon sx={{ fontSize: 24 }} />
+                <Box component={StepIcon} sx={{ fontSize: 24 }} />
               </Box>
 
               {/* Información del paso */}

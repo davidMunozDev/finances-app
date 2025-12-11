@@ -42,7 +42,7 @@ export default function SignInPage() {
     console.log("Login data:", data);
     // Simular un delay
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    router.push(PATHS.ONBOARDING.USER);
+    router.push(PATHS.HOME);
   };
 
   return (

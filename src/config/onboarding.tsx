@@ -52,8 +52,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "summary",
     label: "Resumen",
-    title: "Resumen final",
-    description: "Revisa toda tu información",
+    title: "¡Todo preparado!",
+    description:
+      "Aquí tienes un resumen de tu presupuesto. Puedes modificar esta información en cualquier momento desde el dashboard.",
     path: PATHS.ONBOARDING.SUMMARY,
     icon: AssessmentOutlined,
   },

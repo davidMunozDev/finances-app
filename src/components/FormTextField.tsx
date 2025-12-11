@@ -23,7 +23,18 @@ export const FormTextField = forwardRef<HTMLInputElement, FormTextFieldProps>(
         >
           {label}
         </Typography>
-        <TextField {...props} ref={ref} fullWidth />
+        <TextField
+          sx={{
+            ...props.sx,
+            "& .MuiOutlinedInput-root": {
+              borderRadius: 2,
+              bgcolor: "background.paper",
+            },
+          }}
+          ref={ref}
+          fullWidth
+          {...props}
+        />
       </Box>
     );
   }

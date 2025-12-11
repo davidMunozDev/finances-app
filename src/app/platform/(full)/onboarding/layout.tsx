@@ -141,8 +141,8 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
               flex: 1,
               display: "flex",
               flexDirection: "column",
-              py: { xs: 4, md: 6 },
-              px: { xs: 3, md: 6 },
+              py: { xs: 2, md: 6 },
+              px: { xs: 3, md: 12 },
             }}
           >
             {/* Título y Descripción del Paso */}
