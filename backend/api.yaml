@@ -1,0 +1,765 @@
+openapi: 3.0.3
+info:
+  title: Budget App API
+  version: 1.0.0
+  description: API para presupuestos con ciclos automáticos, gastos fijos, gastos recurrentes y gastos puntuales.
+servers:
+  - url: http://localhost:4000
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Budgets
+  - name: Fixed Expenses
+  - name: Recurring Expenses
+  - name: Expenses
+  - name: Transactions
+  - name: Summary
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Body inválido
+        details:
+          nullable: true
+
+    AuthRegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          example: user@email.com
+        password:
+          type: string
+          example: "123456"
+        full_name:
+          type: string
+          example: David
+        default_currency:
+          type: string
+          example: EUR
+
+    AuthLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          example: user@email.com
+        password:
+          type: string
+          example: "123456"
+
+    AuthUser:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        email: { type: string, example: user@email.com }
+        full_name: { type: string, nullable: true, example: David }
+        default_currency: { type: string, example: EUR }
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          { type: string, example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+        user:
+          $ref: "#/components/schemas/AuthUser"
+
+    Budget:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        user_id: { type: integer, example: 1 }
+        name: { type: string, example: "Presupuesto Principal" }
+        currency: { type: string, example: "EUR" }
+        reset_type:
+          type: string
+          enum: [weekly, monthly, yearly]
+          example: monthly
+        reset_dow:
+          type: integer
+          nullable: true
+          description: "Día semana (1..7 Mon..Sun) si reset_type=weekly"
+          example: null
+        reset_dom:
+          type: integer
+          nullable: true
+          description: "Día mes (1..28 recomendado) si reset_type=monthly"
+          example: 14
+        reset_month:
+          type: integer
+          nullable: true
+          description: "Mes (1..12) si reset_type=yearly"
+          example: null
+        reset_day:
+          type: integer
+          nullable: true
+          description: "Día (1..31) si reset_type=yearly"
+          example: null
+        is_active:
+          type: boolean
+          example: true
+
+    CreateBudgetWeekly:
+      type: object
+      required: [name, reset_type, reset_dow]
+      properties:
+        name: { type: string, example: "Presupuesto Semanal" }
+        reset_type: { type: string, enum: [weekly], example: weekly }
+        reset_dow:
+          type: integer
+          minimum: 1
+          maximum: 7
+          example: 5
+
+    CreateBudgetMonthly:
+      type: object
+      required: [name, reset_type, reset_dom]
+      properties:
+        name: { type: string, example: "Presupuesto Mensual" }
+        reset_type: { type: string, enum: [monthly], example: monthly }
+        reset_dom:
+          type: integer
+          minimum: 1
+          maximum: 28
+          example: 14
+
+    CreateBudgetYearly:
+      type: object
+      required: [name, reset_type, reset_month, reset_day]
+      properties:
+        name: { type: string, example: "Presupuesto Anual" }
+        reset_type: { type: string, enum: [yearly], example: yearly }
+        reset_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          example: 2
+        reset_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          example: 14
+
+    UpdateBudgetRequest:
+      type: object
+      description: "Puedes enviar name y/o cambiar reset_*."
+      properties:
+        name: { type: string, example: "Presupuesto Actualizado" }
+        reset_type:
+          type: string
+          enum: [weekly, monthly, yearly]
+          example: monthly
+        reset_dow:
+          type: integer
+          nullable: true
+          example: null
+        reset_dom:
+          type: integer
+          nullable: true
+          example: 10
+        reset_month:
+          type: integer
+          nullable: true
+          example: null
+        reset_day:
+          type: integer
+          nullable: true
+          example: null
+
+    FixedExpense:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        budget_id: { type: integer, example: 1 }
+        category_id: { type: integer, example: 3 }
+        name: { type: string, example: "Alquiler" }
+        amount: { type: string, example: "750.00" }
+
+    CreateFixedExpenseRequest:
+      type: object
+      required: [category_id, name, amount]
+      properties:
+        category_id: { type: integer, example: 3 }
+        name: { type: string, example: "Alquiler" }
+        amount: { type: number, example: 750 }
+
+    RecurringExpense:
+      type: object
+      properties:
+        id: { type: integer, example: 7 }
+        budget_id: { type: integer, example: 1 }
+        category_id: { type: integer, example: 4 }
+        name: { type: string, example: "Netflix" }
+        amount: { type: string, example: "12.99" }
+        frequency:
+          type: string
+          enum: [weekly, monthly, yearly]
+          example: monthly
+        dow: { type: integer, nullable: true, example: null }
+        dom: { type: integer, nullable: true, example: 13 }
+        month: { type: integer, nullable: true, example: null }
+        day: { type: integer, nullable: true, example: null }
+
+    CreateRecurringWeekly:
+      type: object
+      required: [category_id, name, amount, frequency, dow]
+      properties:
+        category_id: { type: integer, example: 2 }
+        name: { type: string, example: "Gym" }
+        amount: { type: number, example: 15 }
+        frequency: { type: string, enum: [weekly], example: weekly }
+        dow: { type: integer, minimum: 1, maximum: 7, example: 5 }
+
+    CreateRecurringMonthly:
+      type: object
+      required: [category_id, name, amount, frequency, dom]
+      properties:
+        category_id: { type: integer, example: 4 }
+        name: { type: string, example: "Netflix" }
+        amount: { type: number, example: 12.99 }
+        frequency: { type: string, enum: [monthly], example: monthly }
+        dom: { type: integer, minimum: 1, maximum: 28, example: 13 }
+
+    CreateRecurringYearly:
+      type: object
+      required: [category_id, name, amount, frequency, month, day]
+      properties:
+        category_id: { type: integer, example: 6 }
+        name: { type: string, example: "Seguro" }
+        amount: { type: number, example: 300 }
+        frequency: { type: string, enum: [yearly], example: yearly }
+        month: { type: integer, minimum: 1, maximum: 12, example: 2 }
+        day: { type: integer, minimum: 1, maximum: 31, example: 14 }
+
+    ExpenseCreateOneTime:
+      type: object
+      required: [type, category_id, amount]
+      properties:
+        type: { type: string, enum: [one_time], example: one_time }
+        category_id: { type: integer, example: 5 }
+        amount: { type: number, example: 23.5 }
+        description: { type: string, example: "Cena", nullable: true }
+        date:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          example: "2025-02-02"
+
+    ExpenseCreateRecurringWeekly:
+      type: object
+      required: [type, category_id, name, amount, schedule]
+      properties:
+        type: { type: string, enum: [recurring], example: recurring }
+        category_id: { type: integer, example: 2 }
+        name: { type: string, example: "Gym" }
+        amount: { type: number, example: 15 }
+        schedule:
+          type: object
+          required: [frequency, dow]
+          properties:
+            frequency: { type: string, enum: [weekly], example: weekly }
+            dow: { type: integer, minimum: 1, maximum: 7, example: 5 }
+
+    ExpenseCreateRecurringMonthly:
+      type: object
+      required: [type, category_id, name, amount, schedule]
+      properties:
+        type: { type: string, enum: [recurring], example: recurring }
+        category_id: { type: integer, example: 4 }
+        name: { type: string, example: "Netflix" }
+        amount: { type: number, example: 12.99 }
+        schedule:
+          type: object
+          required: [frequency, dom]
+          properties:
+            frequency: { type: string, enum: [monthly], example: monthly }
+            dom: { type: integer, minimum: 1, maximum: 28, example: 13 }
+
+    ExpenseCreateRecurringYearly:
+      type: object
+      required: [type, category_id, name, amount, schedule]
+      properties:
+        type: { type: string, enum: [recurring], example: recurring }
+        category_id: { type: integer, example: 6 }
+        name: { type: string, example: "Seguro" }
+        amount: { type: number, example: 300 }
+        schedule:
+          type: object
+          required: [frequency, month, day]
+          properties:
+            frequency: { type: string, enum: [yearly], example: yearly }
+            month: { type: integer, minimum: 1, maximum: 12, example: 2 }
+            day: { type: integer, minimum: 1, maximum: 31, example: 14 }
+
+    ExpenseCreateResult:
+      oneOf:
+        - type: object
+          properties:
+            kind: { type: string, enum: [transaction], example: transaction }
+            id: { type: integer, example: 42 }
+        - type: object
+          properties:
+            kind:
+              { type: string, enum: [recurring_rule], example: recurring_rule }
+            id: { type: integer, example: 7 }
+
+    BudgetCycle:
+      type: object
+      properties:
+        id: { type: integer, example: 3 }
+        budget_id: { type: integer, example: 1 }
+        start_date: { type: string, example: "2025-01-14" }
+        end_date: { type: string, example: "2025-02-13" }
+
+    Transaction:
+      type: object
+      properties:
+        id: { type: integer, example: 10 }
+        category_id: { type: integer, example: 5 }
+        description: { type: string, nullable: true, example: "Cena" }
+        amount: { type: string, example: "20.50" }
+        date: { type: string, example: "2025-01-20" }
+        source:
+          type: string
+          enum: [fixed, recurring, manual]
+          example: manual
+
+    SummaryResponse:
+      type: object
+      properties:
+        budget:
+          $ref: "#/components/schemas/Budget"
+        cycle:
+          $ref: "#/components/schemas/BudgetCycle"
+        totalSpent:
+          type: number
+          example: 1234.5
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+
+paths:
+  /health:
+    get:
+      security: []
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Registrar usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRegisterRequest"
+      responses:
+        "201":
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "409":
+          description: Email ya registrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthLoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Credenciales inválidas o validación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Usuario autenticado
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthUser" }
+        "401":
+          description: No autorizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /budgets:
+    get:
+      tags: [Budgets]
+      summary: Listar presupuestos activos
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Budget" }
+        "401":
+          description: No autorizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+    post:
+      tags: [Budgets]
+      summary: Crear presupuesto (configuración)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/CreateBudgetWeekly"
+                - $ref: "#/components/schemas/CreateBudgetMonthly"
+                - $ref: "#/components/schemas/CreateBudgetYearly"
+      responses:
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Budget" }
+        "400":
+          description: Validación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /budgets/{id}:
+    get:
+      tags: [Budgets]
+      summary: Obtener presupuesto por id (y sincroniza ciclo)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Budget" }
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+    put:
+      tags: [Budgets]
+      summary: Actualizar presupuesto
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateBudgetRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Budget" }
+        "400":
+          description: Validación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+    delete:
+      tags: [Budgets]
+      summary: Desactivar presupuesto (soft delete)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Eliminado
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /budgets/{budgetId}/fixed-expenses:
+    get:
+      tags: [Fixed Expenses]
+      summary: Listar gastos fijos
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FixedExpense" }
+
+    post:
+      tags: [Fixed Expenses]
+      summary: Crear gasto fijo
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateFixedExpenseRequest" }
+      responses:
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer, example: 1 }
+
+  /budgets/{budgetId}/fixed-expenses/{fixedId}:
+    delete:
+      tags: [Fixed Expenses]
+      summary: Eliminar gasto fijo
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: fixedId
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Eliminado
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /budgets/{budgetId}/recurring-expenses:
+    get:
+      tags: [Recurring Expenses]
+      summary: Listar gastos recurrentes
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RecurringExpense" }
+
+    post:
+      tags: [Recurring Expenses]
+      summary: Crear gasto recurrente (regla)
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/CreateRecurringWeekly"
+                - $ref: "#/components/schemas/CreateRecurringMonthly"
+                - $ref: "#/components/schemas/CreateRecurringYearly"
+      responses:
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer, example: 7 }
+
+  /budgets/{budgetId}/recurring-expenses/{recurringId}:
+    delete:
+      tags: [Recurring Expenses]
+      summary: Eliminar gasto recurrente
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: recurringId
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Eliminado
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /budgets/{budgetId}/expenses:
+    post:
+      tags: [Expenses]
+      summary: Endpoint unificado para crear gasto puntual o regla recurrente
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/ExpenseCreateOneTime"
+                - $ref: "#/components/schemas/ExpenseCreateRecurringWeekly"
+                - $ref: "#/components/schemas/ExpenseCreateRecurringMonthly"
+                - $ref: "#/components/schemas/ExpenseCreateRecurringYearly"
+      responses:
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExpenseCreateResult" }
+        "400":
+          description: Validación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: Presupuesto no encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /budgets/{budgetId}/transactions:
+    post:
+      tags: [Transactions]
+      summary: Crear transacción manual (legacy / opcional si usas /expenses)
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category_id, amount]
+              properties:
+                category_id: { type: integer, example: 5 }
+                amount: { type: number, example: 23.5 }
+                description: { type: string, example: "Cena" }
+                date:
+                  type: string
+                  pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                  example: "2025-02-02"
+      responses:
+        "201":
+          description: Creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer, example: 42 }
+                  cycle: { $ref: "#/components/schemas/BudgetCycle" }
+
+  /budgets/{budgetId}/summary:
+    get:
+      tags: [Summary]
+      summary: Resumen del ciclo actual (sincroniza ciclo y genera fijos/recurrentes idempotente)
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SummaryResponse" }
+        "404":
+          description: Presupuesto no encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }

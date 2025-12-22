@@ -1,8 +1,17 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import swaggerUi from "swagger-ui-express";
+import YAML from "yamljs";
+import path from "path";
 
 import authRoutes from "./routes/auth.routes";
+import budgetsRoutes from "./routes/budgets.routes";
+import fixedRoutes from "./routes/fixed.routes";
+import recurringRoutes from "./routes/recurring.routes";
+import transactionsRoutes from "./routes/transactions.routes";
+import expensesRoutes from "./routes/expenses.routes";
+import categoriesRoutes from "./routes/categories.routes";
 
 import { errorMiddleware } from "./middleware/error.middleware";
 import { validateBody } from "./middleware/validate-body.middleware";
@@ -10,6 +19,7 @@ import { validateBody } from "./middleware/validate-body.middleware";
 dotenv.config();
 
 const app = express();
+const swaggerDocument = YAML.load(path.join(process.cwd(), "api.yaml"));
 
 app.use(cors());
 app.use(express.json());
@@ -24,6 +34,13 @@ app.listen(PORT, () => {
   console.log(`🚀 Backend escuchando en http://localhost:${PORT}`);
 });
 
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/auth", authRoutes);
+app.use("/budgets", budgetsRoutes);
+app.use("/", fixedRoutes);
+app.use("/", recurringRoutes);
+app.use("/", transactionsRoutes);
+app.use("/", expensesRoutes);
+app.use("/", categoriesRoutes);
 
 app.use(errorMiddleware);

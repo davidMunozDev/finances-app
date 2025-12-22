@@ -3,6 +3,7 @@ import type { AuthRequest } from "../types/api.types";
 import { verifyToken } from "../utils/jwt";
 import { AppError } from "../errors/app-error";
 import { ERROR_CODES } from "../constants/error-codes";
+import { HTTP_STATUS } from "../constants/http-status";
 
 export function authMiddleware(
   req: AuthRequest,
@@ -13,7 +14,7 @@ export function authMiddleware(
 
   if (!header || !header.startsWith("Bearer ")) {
     throw new AppError({
-      status: 401,
+      status: HTTP_STATUS.UNAUTHORIZED,
       code: ERROR_CODES.UNAUTHORIZED,
       message: "No token provided",
     });
@@ -27,7 +28,7 @@ export function authMiddleware(
     next();
   } catch {
     throw new AppError({
-      status: 401,
+      status: HTTP_STATUS.UNAUTHORIZED,
       code: ERROR_CODES.UNAUTHORIZED,
       message: "Invalid or expired token",
     });

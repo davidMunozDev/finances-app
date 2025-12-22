@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../errors/app-error";
 import { ERROR_CODES } from "../constants/error-codes";
+import { HTTP_STATUS } from "../constants/http-status";
 
 export function errorMiddleware(
   err: unknown,
@@ -20,7 +21,7 @@ export function errorMiddleware(
   // Errores no controlados
   console.error("UNHANDLED ERROR:", err);
 
-  return res.status(500).json({
+  return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
     code: ERROR_CODES.INTERNAL_ERROR,
     message: "Error interno del servidor",
     details: null,
