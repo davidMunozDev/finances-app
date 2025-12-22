@@ -12,5 +12,9 @@ router.delete(
   "/budgets/:budgetId/fixed-expenses/:fixedId",
   asyncHandler(fixed.remove)
 );
+router.post(
+  "/budgets/:budgetId/fixed-expenses/bulk",
+  asyncHandler(fixed.createBulk)
+);
 
 export default router;

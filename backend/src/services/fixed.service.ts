@@ -29,3 +29,34 @@ export async function deleteFixed(budgetId: number, fixedId: number) {
   );
   return result.affectedRows > 0;
 }
+
+export async function createFixedBulk(params: {
+  budgetId: number;
+  items: Array<{ category_id: number; name: string; amount: number }>;
+}) {
+  const { budgetId, items } = params;
+
+  // Construimos:
+  // INSERT INTO ... (budget_id, category_id, name, amount)
+  // VALUES (?, ?, ?, ?), (?, ?, ?, ?), ...
+  const placeholders = items.map(() => "(?, ?, ?, ?)").join(", ");
+  const values: Array<number | string> = [];
+
+  for (const it of items) {
+    values.push(budgetId, it.category_id, it.name, it.amount);
+  }
+
+  const [result] = await pool.query<DBResult>(
+    `INSERT INTO budget_fixed_expenses (budget_id, category_id, name, amount)
+     VALUES ${placeholders}`,
+    values
+  );
+
+  const firstId = result.insertId;
+  const count = result.affectedRows;
+
+  // IDs consecutivos para el statement
+  const ids = Array.from({ length: count }, (_, i) => firstId + i);
+
+  return ids;
+}

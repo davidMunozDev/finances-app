@@ -3,8 +3,14 @@ import type { AuthRequest } from "../types/api.types";
 import { AppError } from "../errors/app-error";
 import { ERROR_CODES } from "../constants/error-codes";
 import { getBudgetById } from "../services/budgets.service";
-import { listFixed, createFixed, deleteFixed } from "../services/fixed.service";
+import {
+  listFixed,
+  createFixed,
+  deleteFixed,
+  createFixedBulk,
+} from "../services/fixed.service";
 import { syncBudgetCycle } from "../services/budget-cycles.service";
+import { CreateFixedBulkSchema } from "../validators/fixed.validator";
 
 function parseId(v: string) {
   const n = Number(v);
@@ -109,4 +115,49 @@ export async function remove(req: AuthRequest, res: Response) {
     });
 
   return res.status(204).send();
+}
+
+// POST /budgets/:budgetId/fixed-expenses/bulk
+export async function createBulk(req: AuthRequest, res: Response) {
+  const budgetId = parseId(req.params.budgetId);
+  if (!budgetId) {
+    throw new AppError({
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "budgetId inválido",
+    });
+  }
+
+  const budget = await getBudgetById(req.user!.id, budgetId);
+  if (!budget) {
+    throw new AppError({
+      status: 404,
+      code: ERROR_CODES.NOT_FOUND,
+      message: "Presupuesto no encontrado",
+    });
+  }
+
+  const parsed = CreateFixedBulkSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError({
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "Body inválido",
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const items = parsed.data.items.map((i) => ({
+    category_id: i.category_id,
+    name: i.name.trim(),
+    amount: i.amount,
+  }));
+
+  const ids = await createFixedBulk({ budgetId, items });
+
+  await syncBudgetCycle({ userId: req.user!.id, budgetId });
+
+  return res.status(201).json({
+    created: ids.map((id) => ({ id })),
+  });
 }
