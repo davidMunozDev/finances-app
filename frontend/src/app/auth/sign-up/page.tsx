@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Stack, Box, Typography, Link as MuiLink } from "@mui/material";
+import { Stack, Box, Typography, Link as MuiLink, Alert } from "@mui/material";
 import Link from "next/link";
 import {
   FormTextField,
@@ -13,7 +13,9 @@ import {
   Logo,
 } from "@/components";
 import { useRouter } from "next/navigation";
-import { PATHS } from "@/config/paths";
+import { paths } from "@/config/paths";
+import { registerUser } from "@/auth";
+import { useState } from "react";
 
 // Esquema de validación con Zod
 const registerSchema = z
@@ -39,6 +41,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -49,11 +52,19 @@ export default function RegisterPage() {
   });
 
   const onSubmit = async (data: RegisterFormData) => {
-    // Aquí irá la lógica de registro
-    console.log("Form data:", data);
-    // Simular un delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    router.push(PATHS.ONBOARDING.USER);
+    try {
+      setError(null);
+      await registerUser({
+        email: data.email,
+        password: data.password,
+      });
+
+      // Redirigir al onboarding
+      router.push(paths.platform.onboarding.user);
+    } catch (err: any) {
+      console.error("Register error:", err);
+      setError(err?.message || "Error al crear la cuenta. Inténtalo de nuevo.");
+    }
   };
 
   return (
@@ -64,6 +75,13 @@ export default function RegisterPage() {
     >
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack spacing={2.5}>
+          {/* Error message */}
+          {error && (
+            <Alert severity="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+
           {/* Email */}
           <FormTextField
             {...register("email")}
@@ -108,7 +126,7 @@ export default function RegisterPage() {
               ¿Ya tienes una cuenta?{" "}
               <MuiLink
                 component={Link}
-                href={PATHS.SIGN_IN}
+                href={paths.auth.signIn}
                 sx={{
                   color: "primary.main",
                   fontWeight: "semibold",

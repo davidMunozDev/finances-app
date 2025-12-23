@@ -8,13 +8,13 @@ import {
   OnboardingMobileHeader,
   OnboardingHeader,
   OnboardingNavigation,
-} from "@/components/onboarding";
+} from "@/onboarding/components";
 import {
   ONBOARDING_STEPS,
   getNextStep,
   getPreviousStep,
 } from "@/config/onboarding";
-import { PATHS } from "@/config/paths";
+import { paths } from "@/config/paths";
 
 interface OnboardingLayoutProps {
   children: ReactNode;
@@ -76,7 +76,7 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
     if (isLastStep) {
       // Finalizar onboarding y redirigir al dashboard
       localStorage.removeItem("onboarding_completed_steps");
-      router.push(PATHS.HOME);
+      router.push(paths.platform.home);
     } else if (nextStep) {
       router.push(nextStep.path);
     }
@@ -85,7 +85,7 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
   const handleSkip = () => {
     if (isLastStep) {
       localStorage.removeItem("onboarding_completed_steps");
-      router.push(PATHS.HOME);
+      router.push(paths.platform.home);
     } else if (nextStep) {
       router.push(nextStep.path);
     }

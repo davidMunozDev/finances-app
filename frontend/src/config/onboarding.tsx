@@ -5,7 +5,7 @@ import {
   TrendingDownOutlined,
   AssessmentOutlined,
 } from "@mui/icons-material";
-import { PATHS } from "./paths";
+import { paths } from "./paths";
 
 export interface OnboardingStep {
   id: string;
@@ -22,7 +22,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Usuario",
     title: "Configura tu perfil",
     description: "Completa tu información personal",
-    path: PATHS.ONBOARDING.USER,
+    path: paths.platform.onboarding.user,
     icon: PersonOutline,
   },
   {
@@ -30,7 +30,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Presupuesto",
     title: "Crea tu primer presupuesto",
     description: "Define cuánto quieres gastar este mes",
-    path: PATHS.ONBOARDING.BUDGET,
+    path: paths.platform.onboarding.budget,
     icon: AccountBalanceWalletOutlined,
   },
   {
@@ -38,7 +38,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Ingresos",
     title: "Registra tus ingresos",
     description: "Añade tus fuentes de ingreso",
-    path: PATHS.ONBOARDING.INCOMES,
+    path: paths.platform.onboarding.incomes,
     icon: TrendingUpOutlined,
   },
   {
@@ -46,7 +46,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Gastos",
     title: "Registra tus gastos",
     description: "Añade tus gastos principales",
-    path: PATHS.ONBOARDING.OUTCOMES,
+    path: paths.platform.onboarding.outcomes,
     icon: TrendingDownOutlined,
   },
   {
@@ -55,7 +55,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     title: "¡Todo preparado!",
     description:
       "Aquí tienes un resumen de tu presupuesto. Puedes modificar esta información en cualquier momento desde el dashboard.",
-    path: PATHS.ONBOARDING.SUMMARY,
+    path: paths.platform.onboarding.summary,
     icon: AssessmentOutlined,
   },
 ];
