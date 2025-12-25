@@ -15,9 +15,38 @@ export type AuthUserResponse = {
   email: string;
   full_name: string | null;
   default_currency: string;
+  onboarding_completed: boolean;
 };
 
 export type AuthResponse = {
   token: string;
   user: AuthUserResponse;
+};
+
+export type OnboardingDataBody = {
+  user: {
+    full_name: string;
+    default_currency: string;
+  };
+  budget: {
+    name: string;
+    reset_type: "weekly" | "monthly" | "yearly";
+    reset_dow?: number;
+    reset_dom?: number;
+    reset_month?: number;
+    reset_day?: number;
+  };
+  incomes: Array<{
+    description: string;
+    amount: number;
+  }>;
+  categories: Array<{
+    name: string;
+    icon?: string;
+  }>;
+  fixed_expenses: Array<{
+    category_name: string;
+    name: string;
+    amount: number;
+  }>;
 };

@@ -12,9 +12,11 @@ import recurringRoutes from "./routes/recurring.routes";
 import transactionsRoutes from "./routes/transactions.routes";
 import expensesRoutes from "./routes/expenses.routes";
 import categoriesRoutes from "./routes/categories.routes";
+import incomesRoutes from "./routes/incomes.routes";
 
 import { errorMiddleware } from "./middleware/error.middleware";
 import { validateBody } from "./middleware/validate-body.middleware";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
@@ -42,5 +44,7 @@ app.use("/", recurringRoutes);
 app.use("/", transactionsRoutes);
 app.use("/", expensesRoutes);
 app.use("/", categoriesRoutes);
+app.use("/", incomesRoutes);
 
+app.use(cookieParser());
 app.use(errorMiddleware);

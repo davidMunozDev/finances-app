@@ -13,8 +13,25 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL,
   full_name VARCHAR(255),
   default_currency VARCHAR(10) DEFAULT 'EUR',
+  onboarding_completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ======================
+-- refresh_tokens
+-- ======================
+CREATE TABLE refresh_tokens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token_hash VARCHAR(255) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  revoked_at DATETIME NULL,
+  replaced_by_token_hash VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_refresh_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_refresh_user (user_id),
+  UNIQUE INDEX uq_refresh_token_hash (token_hash)
 ) ENGINE=InnoDB;
 
 -- ======================
@@ -35,10 +52,6 @@ CREATE INDEX idx_categories_user ON categories(user_id);
 
 -- ======================
 -- budgets (configuración permanente)
--- reset_type: weekly | monthly | yearly
--- reset_dow: 1..7 (Mon..Sun) para weekly
--- reset_dom: 1..28/31 para monthly (recomendado limitar a 1..28)
--- reset_month: 1..12 y reset_day: 1..31 para yearly
 -- ======================
 CREATE TABLE budgets (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -61,7 +74,6 @@ CREATE INDEX idx_budgets_user ON budgets(user_id);
 
 -- ======================
 -- budget_cycles (histórico de ciclos)
--- siempre hay 1 ciclo "actual" (el de end_date >= today)
 -- ======================
 CREATE TABLE budget_cycles (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -77,7 +89,7 @@ CREATE INDEX idx_cycles_budget ON budget_cycles(budget_id);
 CREATE INDEX idx_cycles_dates ON budget_cycles(start_date, end_date);
 
 -- ======================
--- fixed expenses: se aplican siempre al inicio de cada ciclo
+-- fixed expenses
 -- ======================
 CREATE TABLE budget_fixed_expenses (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -94,10 +106,7 @@ CREATE TABLE budget_fixed_expenses (
 CREATE INDEX idx_fixed_budget ON budget_fixed_expenses(budget_id);
 
 -- ======================
--- recurring expenses: se generan automáticamente según regla
--- - weekly: dow (1..7)
--- - monthly: dom (1..28/31)
--- - yearly: month + day
+-- recurring expenses
 -- ======================
 CREATE TABLE budget_recurring_expenses (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -119,17 +128,16 @@ CREATE TABLE budget_recurring_expenses (
 CREATE INDEX idx_recurring_budget ON budget_recurring_expenses(budget_id);
 
 -- ======================
--- transactions: histórico real (manual + generadas por sistema)
--- source: fixed | recurring | manual
--- cycle_id: a qué ciclo pertenece (para consultas rápidas)
--- unique_key: para evitar duplicados de transacciones generadas (idempotencia)
+-- transactions (incluye incomes)
+-- category_id ahora es NULLABLE para permitir incomes sin categoría
+-- FK category: ON DELETE SET NULL para mantener histórico si se borra categoría
 -- ======================
 CREATE TABLE transactions (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   budget_id INT NOT NULL,
   cycle_id INT NOT NULL,
-  category_id INT NOT NULL,
+  category_id INT NULL,
   type ENUM('income','expense') NOT NULL DEFAULT 'expense',
   description VARCHAR(255),
   amount DECIMAL(10,2) NOT NULL,
@@ -145,17 +153,18 @@ CREATE TABLE transactions (
   CONSTRAINT fk_transactions_cycle
     FOREIGN KEY (cycle_id) REFERENCES budget_cycles(id) ON DELETE CASCADE,
   CONSTRAINT fk_transactions_category
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_transactions_user ON transactions(user_id);
 CREATE INDEX idx_transactions_budget ON transactions(budget_id);
 CREATE INDEX idx_transactions_cycle ON transactions(cycle_id);
 CREATE INDEX idx_transactions_date ON transactions(date);
+CREATE INDEX idx_transactions_type ON transactions(type);
 CREATE UNIQUE INDEX uq_transactions_unique_key ON transactions(unique_key);
 
 -- ======================
--- Categorías predefinidas
+-- Categorías predefinidas (gastos)
 -- ======================
 INSERT INTO categories (user_id, name, icon) VALUES
   (NULL, 'Casa', '🏠'),

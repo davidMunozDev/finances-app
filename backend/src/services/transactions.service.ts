@@ -54,3 +54,17 @@ export async function getCycleTotals(params: {
   );
   return Number(row.total);
 }
+
+export async function getCycleIncomes(params: {
+  userId: number;
+  budgetId: number;
+  cycleId: number;
+}) {
+  const [[row]] = await pool.query<DBRow<{ total: string }>[]>(
+    `SELECT COALESCE(SUM(amount), 0) AS total
+     FROM transactions
+     WHERE user_id = ? AND budget_id = ? AND cycle_id = ? AND type = 'income'`,
+    [params.userId, params.budgetId, params.cycleId]
+  );
+  return Number(row.total);
+}

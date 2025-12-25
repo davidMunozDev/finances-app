@@ -2,121 +2,106 @@ import type { Response } from "express";
 import type { AuthRequest } from "../types/api.types";
 import { AppError } from "../errors/app-error";
 import { ERROR_CODES } from "../constants/error-codes";
+import { HTTP_STATUS } from "../constants/http-status";
+
 import { getBudgetById } from "../services/budgets.service";
 import { syncBudgetCycle } from "../services/budget-cycles.service";
 import {
-  createManualTransaction,
-  listCycleTransactions,
-  getCycleTotals,
-  getCycleIncomes,
-} from "../services/transactions.service";
+  createManualIncome,
+  listCycleIncomes,
+} from "../services/incomes.service";
 
 function parseId(v: string) {
   const n = Number(v);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-export async function addManual(req: AuthRequest, res: Response) {
+// POST /budgets/:budgetId/incomes
+export async function create(req: AuthRequest, res: Response) {
   const budgetId = parseId(req.params.budgetId);
-  if (!budgetId)
+  if (!budgetId) {
     throw new AppError({
-      status: 400,
+      status: HTTP_STATUS.BAD_REQUEST,
       code: ERROR_CODES.VALIDATION_ERROR,
       message: "budgetId inválido",
     });
+  }
 
   const budget = await getBudgetById(req.user!.id, budgetId);
-  if (!budget)
+  if (!budget) {
     throw new AppError({
-      status: 404,
+      status: HTTP_STATUS.NOT_FOUND,
       code: ERROR_CODES.NOT_FOUND,
       message: "Presupuesto no encontrado",
     });
+  }
 
   const cycle = await syncBudgetCycle({ userId: req.user!.id, budgetId });
-  if (!cycle)
+  if (!cycle) {
     throw new AppError({
-      status: 404,
+      status: HTTP_STATUS.NOT_FOUND,
       code: ERROR_CODES.NOT_FOUND,
       message: "No se pudo resolver el ciclo actual",
     });
+  }
 
-  const { category_id, amount, description, date } = req.body ?? {};
-  if (!Number.isInteger(category_id) || category_id <= 0)
+  const { amount, description, date } = req.body ?? {};
+  if (typeof amount !== "number" || amount <= 0) {
     throw new AppError({
-      status: 400,
-      code: ERROR_CODES.VALIDATION_ERROR,
-      message: "category_id inválido",
-    });
-  if (typeof amount !== "number" || amount <= 0)
-    throw new AppError({
-      status: 400,
+      status: HTTP_STATUS.BAD_REQUEST,
       code: ERROR_CODES.VALIDATION_ERROR,
       message: "amount inválido",
     });
+  }
 
   const dateISO =
     typeof date === "string" ? date : new Date().toISOString().slice(0, 10);
 
-  const id = await createManualTransaction({
+  const id = await createManualIncome({
     userId: req.user!.id,
     budgetId,
     cycleId: cycle.id,
-    categoryId: category_id,
     description,
     amount,
     dateISO,
   });
 
-  return res.status(201).json({ id, cycle });
+  return res.status(HTTP_STATUS.CREATED).json({ id, cycle });
 }
 
-export async function currentSummary(req: AuthRequest, res: Response) {
+// GET /budgets/:budgetId/incomes
+export async function getAll(req: AuthRequest, res: Response) {
   const budgetId = parseId(req.params.budgetId);
-  if (!budgetId)
+  if (!budgetId) {
     throw new AppError({
-      status: 400,
+      status: HTTP_STATUS.BAD_REQUEST,
       code: ERROR_CODES.VALIDATION_ERROR,
       message: "budgetId inválido",
     });
+  }
 
   const budget = await getBudgetById(req.user!.id, budgetId);
-  if (!budget)
+  if (!budget) {
     throw new AppError({
-      status: 404,
+      status: HTTP_STATUS.NOT_FOUND,
       code: ERROR_CODES.NOT_FOUND,
       message: "Presupuesto no encontrado",
     });
+  }
 
   const cycle = await syncBudgetCycle({ userId: req.user!.id, budgetId });
-  if (!cycle)
+  if (!cycle) {
     throw new AppError({
-      status: 404,
+      status: HTTP_STATUS.NOT_FOUND,
       code: ERROR_CODES.NOT_FOUND,
       message: "No se pudo resolver el ciclo actual",
     });
+  }
 
-  const tx = await listCycleTransactions({
+  const incomes = await listCycleIncomes({
     userId: req.user!.id,
     budgetId,
     cycleId: cycle.id,
   });
-  const totalSpent = await getCycleTotals({
-    userId: req.user!.id,
-    budgetId,
-    cycleId: cycle.id,
-  });
-  const totalIncome = await getCycleIncomes({
-    userId: req.user!.id,
-    budgetId,
-    cycleId: cycle.id,
-  });
-
-  return res.json({
-    budget,
-    cycle,
-    totalSpent,
-    totalIncome,
-    transactions: tx,
-  });
+  return res.json({ cycle, incomes });
 }

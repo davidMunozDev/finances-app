@@ -1,6 +1,6 @@
 import type { Response, NextFunction } from "express";
 import type { AuthRequest } from "../types/api.types";
-import { verifyToken } from "../utils/jwt";
+import jwt from "jsonwebtoken";
 import { AppError } from "../errors/app-error";
 import { ERROR_CODES } from "../constants/error-codes";
 import { HTTP_STATUS } from "../constants/http-status";
@@ -23,8 +23,8 @@ export function authMiddleware(
   const token = header.split(" ")[1];
 
   try {
-    const payload = verifyToken(token);
-    req.user = { id: payload.id };
+    const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as any;
+    req.user = { id: Number(payload.sub) };
     next();
   } catch {
     throw new AppError({

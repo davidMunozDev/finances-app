@@ -9,6 +9,7 @@ security:
   - bearerAuth: []
 tags:
   - name: Auth
+  - name: Categories
   - name: Budgets
   - name: Fixed Expenses
   - name: Recurring Expenses
@@ -59,10 +60,10 @@ components:
       properties:
         email:
           type: string
-          example: user@email.com
+          example: david@david.com
         password:
           type: string
-          example: "123456"
+          example: "1234"
 
     AuthUser:
       type: object
@@ -71,6 +72,7 @@ components:
         email: { type: string, example: user@email.com }
         full_name: { type: string, nullable: true, example: David }
         default_currency: { type: string, example: EUR }
+        onboarding_completed: { type: boolean, example: false }
 
     AuthResponse:
       type: object
@@ -79,6 +81,27 @@ components:
           { type: string, example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
         user:
           $ref: "#/components/schemas/AuthUser"
+
+    Category:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        user_id: { type: integer, example: 1 }
+        name: { type: string, example: "Alimentación" }
+        icon: { type: string, nullable: true, example: "🍔" }
+
+    CreateCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, example: "Mascotas" }
+        icon: { type: string, nullable: true, example: "🐶" }
+
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name: { type: string, example: "Mascotas y Veterinario" }
+        icon: { type: string, nullable: true, example: "🐾" }
 
     Budget:
       type: object
@@ -432,6 +455,247 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorResponse" }
 
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Cerrar sesión (invalida refresh token)
+      responses:
+        "200":
+          description: Sesión cerrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Logged out successfully" }
+        "401":
+          description: No autorizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /auth/delete:
+    delete:
+      tags: [Auth]
+      summary: Eliminar cuenta de usuario
+      responses:
+        "200":
+          description: Usuario eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    { type: string, example: "User deleted successfully" }
+        "401":
+          description: No autorizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Refrescar token de acceso
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        "200":
+          description: Token refrescado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+
+  /auth/onboarding:
+    patch:
+      tags: [Auth]
+      summary: Completar onboarding con todos los datos iniciales
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user, budget, incomes, categories, fixed_expenses]
+              properties:
+                user:
+                  type: object
+                  required: [full_name, default_currency]
+                  properties:
+                    full_name: { type: string, example: "David Muñoz" }
+                    default_currency: { type: string, example: "EUR" }
+                budget:
+                  type: object
+                  required: [name, reset_type]
+                  properties:
+                    name: { type: string, example: "Presupuesto Principal" }
+                    reset_type:
+                      {
+                        type: string,
+                        enum: [weekly, monthly, yearly],
+                        example: "monthly",
+                      }
+                    reset_dow: { type: integer, nullable: true, example: null }
+                    reset_dom: { type: integer, nullable: true, example: 1 }
+                    reset_month:
+                      { type: integer, nullable: true, example: null }
+                    reset_day: { type: integer, nullable: true, example: null }
+                incomes:
+                  type: array
+                  items:
+                    type: object
+                    required: [description, amount]
+                    properties:
+                      description: { type: string, example: "Salario" }
+                      amount: { type: number, example: 2500 }
+                categories:
+                  type: array
+                  items:
+                    type: object
+                    required: [name]
+                    properties:
+                      name: { type: string, example: "Alimentación" }
+                      icon: { type: string, nullable: true, example: "🍔" }
+                fixed_expenses:
+                  type: array
+                  items:
+                    type: object
+                    required: [category_id, name, amount]
+                    properties:
+                      category_id: { type: integer, example: 1 }
+                      name: { type: string, example: "Alquiler" }
+                      amount: { type: number, example: 850 }
+      responses:
+        "200":
+          description: Onboarding completado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    {
+                      type: string,
+                      example: "Onboarding completado exitosamente",
+                    }
+                  onboarding_completed: { type: boolean, example: true }
+                  budget_id: { type: integer, example: 1 }
+        "400":
+          description: Datos incompletos o inválidos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          description: No autorizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /categories:
+    get:
+      tags: [Categories]
+      summary: Listar todas las categorías del usuario
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Category" }
+        "401":
+          description: No autorizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+    post:
+      tags: [Categories]
+      summary: Crear nueva categoría
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: Categoría creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer, example: 1 }
+        "400":
+          description: Validación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /categories/{id}:
+    put:
+      tags: [Categories]
+      summary: Actualizar categoría
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryRequest"
+      responses:
+        "200":
+          description: Categoría actualizada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Category" }
+        "400":
+          description: Validación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: Categoría no encontrada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+    delete:
+      tags: [Categories]
+      summary: Eliminar categoría
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Categoría eliminada
+        "404":
+          description: Categoría no encontrada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
   /budgets:
     get:
       tags: [Budgets]
@@ -601,6 +865,46 @@ paths:
           description: Eliminado
         "404":
           description: No encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /budgets/{budgetId}/fixed-expenses/bulk:
+    post:
+      tags: [Fixed Expenses]
+      summary: Crear múltiples gastos fijos en una sola petición
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/CreateFixedExpenseRequest"
+      responses:
+        "201":
+          description: Gastos fijos creados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer, example: 3 }
+                  ids:
+                    type: array
+                    items: { type: integer }
+                    example: [1, 2, 3]
+        "400":
+          description: Validación
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorResponse" }
