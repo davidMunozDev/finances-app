@@ -1,3 +1,5 @@
+"use client";
+
 import TransactionItemList from "./TransactionItemList";
 import { Control } from "react-hook-form";
 

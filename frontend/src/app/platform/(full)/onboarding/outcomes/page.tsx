@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -14,6 +14,9 @@ import { AddExpenseCategoryModal } from "@/components";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useOnboarding } from "@/onboarding";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useCategories } from "@/data/categories/hooks";
 
 const expenseSchema = z.object({
   category: z.string().min(1, "La categoría es requerida"),
@@ -27,7 +30,7 @@ const expenseSchema = z.object({
         name: z.string().min(1, "El nombre del gasto es requerido"),
         amount: z
           .number({ message: "Debe ser un número" })
-          .min(0, "El monto debe ser mayor o igual a 0"),
+          .min(0, "La cantidaddebe ser mayor o igual a 0"),
       })
     )
     .min(1, "Debe haber al menos un gasto"),
@@ -50,9 +53,14 @@ interface OutcomesProps {
   totalIncome?: number;
 }
 
-export default function Outcomes({ totalIncome = 1000 }: OutcomesProps) {
+export default function Outcomes({ totalIncome = 0 }: OutcomesProps) {
+  const { data, setCategories, setFixedExpenses, setSubmitHandler } =
+    useOnboarding();
+  const { formatCurrency } = useCurrency();
+  const { categories: apiCategories } = useCategories();
   const [modalOpen, setModalOpen] = useState(false);
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [categories, setLocalCategories] = useState<ExpenseCategory[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const {
     control,
@@ -74,8 +82,74 @@ export default function Outcomes({ totalIncome = 1000 }: OutcomesProps) {
 
   const period = watch("period");
 
+  // Calcular total de ingresos del contexto
+  const contextTotalIncome = data.incomes.reduce(
+    (sum, inc) => sum + inc.amount,
+    0
+  );
+  const actualTotalIncome = contextTotalIncome || totalIncome;
+
   const totalExpenses = categories.reduce((sum, cat) => sum + cat.total, 0);
-  const remainingAmount = totalIncome - totalExpenses;
+  const remainingAmount = actualTotalIncome - totalExpenses;
+
+  // Cargar categorías guardadas del contexto al montar (solo una vez)
+  useEffect(() => {
+    if (!isLoaded && data.fixed_expenses.length > 0) {
+      // Reconstruir las categorías desde los gastos fijos guardados
+      const categoriesMap = new Map<string, ExpenseCategory>();
+
+      data.fixed_expenses.forEach((expense) => {
+        const categoryKey = expense.category_name;
+        if (!categoriesMap.has(categoryKey)) {
+          categoriesMap.set(categoryKey, {
+            id: Date.now().toString() + Math.random(),
+            category: expense.category_name,
+            period: "monthly", // Default, ya que no guardamos este dato
+            expenses: [],
+            total: 0,
+          });
+        }
+
+        const category = categoriesMap.get(categoryKey)!;
+        category.expenses.push({
+          name: expense.name,
+          amount: expense.amount,
+        });
+        category.total += expense.amount;
+      });
+
+      setLocalCategories(Array.from(categoriesMap.values()));
+      setIsLoaded(true);
+    } else if (!isLoaded && data.fixed_expenses.length === 0) {
+      setIsLoaded(true);
+    }
+  }, [data.fixed_expenses, isLoaded]);
+
+  // Registrar handler que siempre permite continuar
+  useEffect(() => {
+    setSubmitHandler(async () => true);
+    return () => setSubmitHandler(null);
+  }, [setSubmitHandler]);
+
+  // Guardar en el contexto cuando cambian las categorías
+  useEffect(() => {
+    // Extraer categorías únicas
+    const uniqueCategories = Array.from(
+      new Set(categories.map((cat) => cat.category))
+    ).map((name) => ({ name, icon: "📁" }));
+
+    // Extraer gastos fijos
+    const fixedExpenses = categories.flatMap((cat) =>
+      cat.expenses.map((exp) => ({
+        category_name: cat.category,
+        name: exp.name,
+        amount: exp.amount,
+      }))
+    );
+
+    setCategories(uniqueCategories);
+    setFixedExpenses(fixedExpenses);
+  }, [categories, setCategories, setFixedExpenses]);
 
   const onSubmit = (data: ExpenseFormData) => {
     const total = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -90,16 +164,16 @@ export default function Outcomes({ totalIncome = 1000 }: OutcomesProps) {
       total,
     };
 
-    setCategories([...categories, newCategory]);
+    setLocalCategories([...categories, newCategory]);
     setModalOpen(false);
     reset();
   };
 
   const handleDeleteCategory = (id: string) => {
-    setCategories(categories.filter((cat) => cat.id !== id));
+    setLocalCategories(categories.filter((cat) => cat.id !== id));
   };
 
-  const existingCategories = categories.map((cat) => cat.category);
+  const existingCategories = apiCategories.map((cat) => cat.name);
 
   return (
     <Box sx={{ maxWidth: 600, mx: "auto" }}>
@@ -125,9 +199,13 @@ export default function Outcomes({ totalIncome = 1000 }: OutcomesProps) {
           sx={{
             fontWeight: 700,
             color: remainingAmount >= 0 ? "success.main" : "error.main",
+            mb: 0.5,
           }}
         >
-          ${remainingAmount.toFixed(2)}
+          {formatCurrency(remainingAmount)}
+        </Typography>
+        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+          de {formatCurrency(actualTotalIncome)}
         </Typography>
       </Box>
 
@@ -173,7 +251,7 @@ export default function Outcomes({ totalIncome = 1000 }: OutcomesProps) {
                     variant="h6"
                     sx={{ fontWeight: 600, color: "error.main" }}
                   >
-                    ${category.total.toFixed(2)}
+                    {formatCurrency(category.total)}
                   </Typography>
                   {/* Botón Eliminar */}
                   <IconButton

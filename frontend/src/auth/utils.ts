@@ -1,5 +1,5 @@
 import { paths } from "@/config/paths";
-import type { AuthUser } from "./types";
+import type { AuthUser } from "@/data/auth/types";
 
 const ACCESS_TOKEN_KEY = "access_token";
 const USER_KEY = "user_data";
@@ -30,6 +30,7 @@ export function removeAccessToken(): void {
   if (typeof window !== "undefined") {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
   }
+  window.location.href = paths.auth.signIn;
 }
 
 /**

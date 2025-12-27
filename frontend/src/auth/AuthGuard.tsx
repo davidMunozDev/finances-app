@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Box, CircularProgress } from "@mui/material";
-import { useAuth } from "./hooks";
+import { Loader } from "@/components";
+import { useAuth } from "@/data/auth/hooks";
 import { paths } from "@/config/paths";
 
 interface AuthGuardProps {
@@ -25,18 +25,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   // Mostrar loading mientras verifica la autenticación (solo en rutas protegidas)
   if (isLoading && !isPublicRoute) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
+    return <Loader />;
   }
 
   // Si no está autenticado y no es ruta pública, no mostrar contenido (se redirigirá)

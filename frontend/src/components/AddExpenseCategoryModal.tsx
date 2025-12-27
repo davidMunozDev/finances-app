@@ -22,6 +22,7 @@ import { FormTextField, FormSelect } from "@/components";
 import ExpenseList from "./ExpenseList";
 import { Control, Controller } from "react-hook-form";
 import { PERIODS, DAYS_OF_WEEK, DAYS_OF_MONTH } from "@/config/budget";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface AddExpenseCategoryModalProps {
   open: boolean;
@@ -44,6 +45,8 @@ export default function AddExpenseCategoryModal({
   period,
   existingCategories,
 }: AddExpenseCategoryModalProps) {
+  const { formatCurrency } = useCurrency();
+
   const renderPeriodField = () => {
     switch (period) {
       case "weekly":
@@ -149,7 +152,7 @@ export default function AddExpenseCategoryModal({
             Añadir categoría de gasto
           </Typography>
           <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
-            Restante: ${remainingAmount.toFixed(2)}
+            Restante: {formatCurrency(remainingAmount)}
           </Typography>
         </Box>
         <Button

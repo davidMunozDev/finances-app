@@ -14,6 +14,7 @@ export interface OnboardingStep {
   description: string;
   path: string;
   icon: React.ComponentType;
+  skip?: boolean;
 }
 
 export const ONBOARDING_STEPS: OnboardingStep[] = [
@@ -24,6 +25,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: "Completa tu información personal",
     path: paths.platform.onboarding.user,
     icon: PersonOutline,
+    skip: false,
   },
   {
     id: "budget",
@@ -32,6 +34,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: "Define cuánto quieres gastar este mes",
     path: paths.platform.onboarding.budget,
     icon: AccountBalanceWalletOutlined,
+    skip: false,
   },
   {
     id: "incomes",
@@ -40,6 +43,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: "Añade tus fuentes de ingreso",
     path: paths.platform.onboarding.incomes,
     icon: TrendingUpOutlined,
+    skip: true,
   },
   {
     id: "outcomes",
@@ -48,6 +52,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: "Añade tus gastos principales",
     path: paths.platform.onboarding.outcomes,
     icon: TrendingDownOutlined,
+    skip: true,
   },
   {
     id: "summary",

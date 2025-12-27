@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Box, InputAdornment } from "@mui/material";
 import {
   AccountBalanceWalletOutlined,
@@ -11,6 +12,7 @@ import { PERIODS, DAYS_OF_WEEK, DAYS_OF_MONTH } from "@/config/budget";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useOnboarding } from "@/onboarding";
 
 const budgetSchema = z
   .object({
@@ -36,28 +38,73 @@ const budgetSchema = z
 type BudgetFormData = z.infer<typeof budgetSchema>;
 
 export default function Budget() {
+  const { data, setBudgetData, setSubmitHandler } = useOnboarding();
+
   const {
     control,
     handleSubmit,
     watch,
+    reset,
     formState: { errors },
   } = useForm<BudgetFormData>({
     resolver: zodResolver(budgetSchema),
     defaultValues: {
-      budgetName: "",
-      period: "monthly",
-      dayOfWeek: "1",
-      dayOfMonth: "1",
+      budgetName: data.budget?.name || "",
+      period: data.budget?.reset_type || "monthly",
+      dayOfWeek: data.budget?.reset_dow?.toString() || "1",
+      dayOfMonth: data.budget?.reset_dom?.toString() || "1",
       yearlyDate: "",
     },
   });
 
   const period = watch("period");
 
-  const onSubmit = (data: BudgetFormData) => {
-    console.log("Budget data:", data);
-    // Aquí guardarías los datos
+  // Actualizar valores del formulario cuando cambian los datos del contexto
+  useEffect(() => {
+    reset({
+      budgetName: data.budget?.name || "",
+      period: data.budget?.reset_type || "monthly",
+      dayOfWeek: data.budget?.reset_dow?.toString() || "1",
+      dayOfMonth: data.budget?.reset_dom?.toString() || "1",
+      yearlyDate: "",
+    });
+  }, [data.budget, reset]);
+
+  const onSubmit = (formData: BudgetFormData) => {
+    const budgetData: any = {
+      name: formData.budgetName,
+      reset_type: formData.period,
+    };
+
+    if (formData.period === "weekly" && formData.dayOfWeek) {
+      budgetData.reset_dow = parseInt(formData.dayOfWeek);
+    } else if (formData.period === "monthly" && formData.dayOfMonth) {
+      budgetData.reset_dom = parseInt(formData.dayOfMonth);
+    } else if (formData.period === "yearly" && formData.yearlyDate) {
+      const date = new Date(formData.yearlyDate);
+      budgetData.reset_month = date.getMonth() + 1;
+      budgetData.reset_day = date.getDate();
+    }
+
+    setBudgetData(budgetData);
+    return true;
   };
+
+  useEffect(() => {
+    setSubmitHandler(async () => {
+      return new Promise((resolve) => {
+        handleSubmit(
+          (data) => {
+            onSubmit(data);
+            resolve(true);
+          },
+          () => resolve(false)
+        )();
+      });
+    });
+
+    return () => setSubmitHandler(null);
+  }, [handleSubmit, setSubmitHandler]);
 
   const renderPeriodField = () => {
     switch (period) {
@@ -138,11 +185,7 @@ export default function Budget() {
   };
 
   return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit(onSubmit)}
-      sx={{ maxWidth: 600, mx: "auto" }}
-    >
+    <Box sx={{ maxWidth: 600, mx: "auto" }}>
       {/* Campo de Nombre del Presupuesto */}
       <Box sx={{ mb: 3 }}>
         <Controller

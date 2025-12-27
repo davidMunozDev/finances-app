@@ -14,7 +14,7 @@ import {
   styled,
 } from "@mui/material";
 import { Check } from "@mui/icons-material";
-import { ONBOARDING_STEPS, OnboardingStep } from "@/config/onboarding";
+import { ONBOARDING_STEPS } from "@/config/onboarding";
 
 // Conector personalizado con estilo moderno
 const CustomConnector = styled(StepConnector)(({ theme }) => ({

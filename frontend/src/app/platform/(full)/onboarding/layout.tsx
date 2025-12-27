@@ -2,7 +2,7 @@
 
 import React, { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Box, Container, useTheme, useMediaQuery } from "@mui/material";
+import { Box, Container, useTheme, useMediaQuery, Link } from "@mui/material";
 import {
   OnboardingSidebar,
   OnboardingMobileHeader,
@@ -10,22 +10,37 @@ import {
   OnboardingNavigation,
 } from "@/onboarding/components";
 import {
+  OnboardingProvider,
+  useOnboarding,
+} from "@/onboarding/OnboardingProvider";
+import {
   ONBOARDING_STEPS,
   getNextStep,
   getPreviousStep,
 } from "@/config/onboarding";
 import { paths } from "@/config/paths";
+import { logoutUser } from "@/data/auth/api";
 
 interface OnboardingLayoutProps {
   children: ReactNode;
 }
 
 export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
+  return (
+    <OnboardingProvider>
+      <OnboardingLayoutContent>{children}</OnboardingLayoutContent>
+    </OnboardingProvider>
+  );
+}
+
+function OnboardingLayoutContent({ children }: OnboardingLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  const { triggerSubmit, submitOnboarding } = useOnboarding();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Determinar el paso actual basado en la ruta
   const currentStep = ONBOARDING_STEPS.find((step) =>
@@ -68,15 +83,30 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    // Ejecutar el submit del paso actual
+    const isValid = await triggerSubmit();
+
+    if (!isValid) {
+      return; // No continuar si la validación falla
+    }
+
     if (currentStepId) {
       markStepAsCompleted(currentStepId);
     }
 
     if (isLastStep) {
-      // Finalizar onboarding y redirigir al dashboard
-      localStorage.removeItem("onboarding_completed_steps");
-      router.push(paths.platform.home);
+      // Enviar todos los datos al backend
+      try {
+        setIsSubmitting(true);
+        await submitOnboarding();
+        localStorage.removeItem("onboarding_completed_steps");
+        router.push(paths.platform.home);
+      } catch (error) {
+        console.error("Error completing onboarding:", error);
+        setIsSubmitting(false);
+        // El error se muestra en el componente outcomes
+      }
     } else if (nextStep) {
       router.push(nextStep.path);
     }
@@ -91,6 +121,14 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
     }
   };
 
+  const handleGoToHome = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -100,6 +138,32 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
         flexDirection: { xs: "column", md: "row" },
       }}
     >
+      {/* Enlace Ir a inicio - Esquina superior derecha */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: { xs: 16, md: 24 },
+          right: { xs: 16, md: 32 },
+          zIndex: 1000,
+        }}
+      >
+        <Link
+          component="button"
+          onClick={handleGoToHome}
+          sx={{
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            color: "primary.main",
+            textDecoration: "none",
+            cursor: "pointer",
+            "&:hover": {
+              textDecoration: "underline",
+            },
+          }}
+        >
+          Ir a inicio
+        </Link>
+      </Box>
       {/* Sidebar Izquierdo - Stepper Vertical (Desktop) */}
       {!isMobile && (
         <OnboardingSidebar
@@ -163,11 +227,13 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
 
             {/* Botones de Navegación */}
             <OnboardingNavigation
+              skip={currentStep?.skip || false}
               isFirstStep={isFirstStep}
               isLastStep={isLastStep}
               onPrevious={handlePrevious}
               onContinue={handleContinue}
               onSkip={handleSkip}
+              isSubmitting={isSubmitting}
             />
           </Container>
         </Box>

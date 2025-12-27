@@ -1,13 +1,13 @@
 import type { LoginBody, RegisterBody, AuthResponse, AuthUser } from "./types";
+import { mutate } from "swr";
 
 import { defaultServerInstance } from "@/config/servers";
 import { endpoints } from "@/config/endpoints";
 import {
   setAccessToken,
   removeAccessToken,
-  setUserData,
   removeUserData,
-} from "./utils";
+} from "@/auth/utils";
 
 /**
  * Register a new user
@@ -20,7 +20,7 @@ export async function registerUser(data: RegisterBody): Promise<AuthResponse> {
 
   // Guardar el access token y user data automáticamente
   setAccessToken(response.data.access_token);
-  setUserData(response.data.user);
+  mutate(endpoints.auth.me);
 
   return response.data;
 }
@@ -36,7 +36,7 @@ export async function loginUser(data: LoginBody): Promise<AuthResponse> {
 
   // Guardar el access token y user data automáticamente
   setAccessToken(response.data.access_token);
-  setUserData(response.data.user);
+  mutate(endpoints.auth.me);
 
   return response.data;
 }

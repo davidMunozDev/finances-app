@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Box, InputAdornment, Typography } from "@mui/material";
 import { PersonOutline } from "@mui/icons-material";
 import { FormTextField, FormSelect } from "@/components";
@@ -7,6 +8,7 @@ import { CURRENCIES } from "@/config/currencies";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useOnboarding } from "@/onboarding";
 
 const userSchema = z.object({
   name: z
@@ -19,29 +21,56 @@ const userSchema = z.object({
 type UserFormData = z.infer<typeof userSchema>;
 
 export default function User() {
+  const { data, setUserData, setSubmitHandler } = useOnboarding();
+
   const {
     control,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
-      name: "",
-      currency: "USD",
+      name: data.user?.full_name || "",
+      currency: data.user?.default_currency || "EUR",
     },
   });
 
-  const onSubmit = (data: UserFormData) => {
-    console.log("User data:", data);
-    // Aquí guardarías los datos
+  // Actualizar valores del formulario cuando cambian los datos del contexto
+  useEffect(() => {
+    reset({
+      name: data.user?.full_name || "",
+      currency: data.user?.default_currency || "EUR",
+    });
+  }, [data.user, reset]);
+
+  const onSubmit = (formData: UserFormData) => {
+    setUserData({
+      full_name: formData.name,
+      default_currency: formData.currency,
+    });
+    return true;
   };
 
+  // Registrar el handler de submit
+  useEffect(() => {
+    setSubmitHandler(async () => {
+      return new Promise((resolve) => {
+        handleSubmit(
+          (data) => {
+            onSubmit(data);
+            resolve(true);
+          },
+          () => resolve(false)
+        )();
+      });
+    });
+
+    return () => setSubmitHandler(null);
+  }, [handleSubmit, setSubmitHandler]);
+
   return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit(onSubmit)}
-      sx={{ maxWidth: 600, mx: "auto" }}
-    >
+    <Box sx={{ maxWidth: 600, mx: "auto" }}>
       {/* Campo de Nombre */}
       <Box sx={{ mb: 3 }}>
         <Controller

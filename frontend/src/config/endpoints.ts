@@ -6,6 +6,7 @@ export const endpoints = {
     me: "/auth/me",
     delete: "/auth/delete",
     refresh: "/auth/refresh",
+    onboarding: "/auth/onboarding",
   },
   budgets: {
     root: "/budgets",

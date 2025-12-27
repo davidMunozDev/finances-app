@@ -3,26 +3,36 @@
 import { Box, Typography, Divider } from "@mui/material";
 import { PieChart } from "@mui/x-charts/PieChart";
 import CategoryList from "@/components/CategoryList";
+import { useOnboarding } from "@/onboarding";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface ExpenseCategory {
   category: string;
   total: number;
 }
 
-interface SummaryProps {
-  totalIncome?: number;
-  expenseCategories?: ExpenseCategory[];
-}
+export default function Summary() {
+  const { data } = useOnboarding();
+  const { formatCurrency } = useCurrency();
 
-export default function Summary({
-  totalIncome = 2500,
-  expenseCategories = [
-    { category: "Casa", total: 570 },
-    { category: "Comida", total: 250 },
-    { category: "Ocio", total: 120 },
-  ],
-}: SummaryProps) {
-  const totalExpenses = expenseCategories.reduce(
+  // Calcular total de ingresos
+  const totalIncome = data.incomes.reduce((sum, inc) => sum + inc.amount, 0);
+
+  // Calcular gastos por categoría
+  const expensesByCategory = data.fixed_expenses.reduce((acc, expense) => {
+    const existing = acc.find((cat) => cat.category === expense.category_name);
+    if (existing) {
+      existing.total += expense.amount;
+    } else {
+      acc.push({
+        category: expense.category_name,
+        total: expense.amount,
+      });
+    }
+    return acc;
+  }, [] as ExpenseCategory[]);
+
+  const totalExpenses = expensesByCategory.reduce(
     (sum, cat) => sum + cat.total,
     0
   );
@@ -40,12 +50,20 @@ export default function Summary({
   ];
 
   // Datos para el gráfico
-  const chartData = expenseCategories.map((cat, index) => ({
+  const chartData = expensesByCategory.map((cat, index) => ({
     id: cat.category,
     value: cat.total,
     label: cat.category,
     color: colors[index % colors.length],
   }));
+
+  // Si no hay datos, mostrar valores por defecto
+  const displayIncome = totalIncome || 0;
+  const displayExpenses = totalExpenses || 0;
+  const displayChartData =
+    chartData.length > 0
+      ? chartData
+      : [{ id: "Sin datos", value: 100, label: "Sin datos", color: "#E0E0E0" }];
 
   return (
     <Box sx={{ maxWidth: 600, mx: "auto" }}>
@@ -71,7 +89,7 @@ export default function Summary({
           <PieChart
             series={[
               {
-                data: chartData,
+                data: displayChartData,
                 innerRadius: 80,
                 outerRadius: 110,
                 paddingAngle: 2,
@@ -112,7 +130,10 @@ export default function Summary({
                 fontSize: { xs: "2.5rem", sm: "3rem" },
               }}
             >
-              {((totalExpenses / totalIncome) * 100).toFixed(0)}%
+              {displayIncome > 0
+                ? ((displayExpenses / displayIncome) * 100).toFixed(0)
+                : "0"}
+              %
             </Typography>
             <Typography
               variant="body2"
@@ -154,12 +175,10 @@ export default function Summary({
             <Typography
               variant="h6"
               sx={{
-                fontWeight: 700,
-                color: "success.main",
                 fontSize: "1.25rem",
               }}
             >
-              ${totalIncome.toFixed(0)}
+              {formatCurrency(displayIncome)}
             </Typography>
           </Box>
           <Box sx={{ textAlign: "center" }}>
@@ -184,7 +203,7 @@ export default function Summary({
                 fontSize: "1.25rem",
               }}
             >
-              ${totalExpenses.toFixed(0)}
+              {formatCurrency(displayExpenses)}
             </Typography>
           </Box>
         </Box>
@@ -193,7 +212,9 @@ export default function Summary({
       <Divider sx={{ mb: 3 }} />
 
       {/* Lista de Categorías */}
-      <CategoryList categories={expenseCategories} colors={colors} />
+      <CategoryList categories={expensesByCategory} colors={colors} />
+      {/* Lista de Categorías */}
+      {/* <CategoryList categories={expenseCategories} colors={colors} /> */}
     </Box>
   );
 }

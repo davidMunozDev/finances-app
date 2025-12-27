@@ -1,4 +1,5 @@
 import { Box, Typography } from "@mui/material";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface Category {
   category: string;
@@ -25,6 +26,8 @@ export default function CategoryList({
   categories,
   colors = defaultColors,
 }: CategoryListProps) {
+  const { formatCurrency } = useCurrency();
+
   return (
     <Box sx={{ textAlign: "left" }}>
       {categories.map((category, index) => (
@@ -67,7 +70,7 @@ export default function CategoryList({
               color: "text.primary",
             }}
           >
-            ${category.total.toFixed(0)}
+            {formatCurrency(category.total)}
           </Typography>
         </Box>
       ))}

@@ -7,23 +7,28 @@ import {
   IconButton,
   useMediaQuery,
   useTheme,
+  CircularProgress,
 } from "@mui/material";
 import { ArrowBack, ArrowForward, SkipNext } from "@mui/icons-material";
 
 interface OnboardingNavigationProps {
   isFirstStep: boolean;
   isLastStep: boolean;
+  skip: boolean;
   onPrevious: () => void;
   onContinue: () => void;
   onSkip: () => void;
+  isSubmitting?: boolean;
 }
 
 export default function OnboardingNavigation({
   isFirstStep,
   isLastStep,
+  skip,
   onPrevious,
   onContinue,
   onSkip,
+  isSubmitting = false,
 }: OnboardingNavigationProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -77,7 +82,7 @@ export default function OnboardingNavigation({
       {/* Botones Skip y Continuar */}
       <Box sx={{ display: "flex", gap: 2 }}>
         {/* Botón Skip (no se muestra en el último paso) */}
-        {!isLastStep && (
+        {!isLastStep && skip && (
           <Button
             variant="text"
             endIcon={<SkipNext />}
@@ -103,8 +108,12 @@ export default function OnboardingNavigation({
         {/* Botón Continuar/Finalizar */}
         <Button
           variant="contained"
-          endIcon={!isLastStep && <ArrowForward />}
+          endIcon={!isLastStep && !isSubmitting && <ArrowForward />}
           onClick={onContinue}
+          disabled={isSubmitting}
+          startIcon={
+            isSubmitting && <CircularProgress size={20} color="inherit" />
+          }
           sx={{
             px: 4,
             py: 1.5,
@@ -118,7 +127,11 @@ export default function OnboardingNavigation({
             },
           }}
         >
-          {isLastStep ? "Finalizar" : "Siguiente"}
+          {isSubmitting
+            ? "Completando..."
+            : isLastStep
+            ? "Finalizar"
+            : "Siguiente"}
         </Button>
       </Box>
     </Box>

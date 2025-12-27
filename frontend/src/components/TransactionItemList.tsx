@@ -6,15 +6,10 @@ import {
   TrendingUpOutlined,
   AddCircleOutline,
   DeleteOutline,
-  AttachMoney,
+  Payments,
 } from "@mui/icons-material";
 import { FormTextField } from "@/components";
 import { Control, Controller, useFieldArray } from "react-hook-form";
-
-interface TransactionItem {
-  name: string;
-  amount: number;
-}
 
 interface TransactionItemListProps {
   control: Control<any>;
@@ -110,25 +105,25 @@ export default function TransactionItemList({
             />
           </Box>
 
-          {/* Campo Monto */}
-          <Box sx={{ width: 100 }}>
+          {/* Campo cantidad */}
+          <Box sx={{ width: 120 }}>
             <Controller
               name={`${name}.${index}.amount`}
               control={control}
               render={({ field: { onChange, value, ...field } }) => (
                 <FormTextField
                   {...field}
-                  label={index === 0 ? "Monto" : ""}
+                  label={index === 0 ? "Cantidad" : ""}
                   type="number"
                   placeholder="0"
                   value={value}
-                  onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => onChange(parseFloat(e.target.value))}
                   error={!!errors?.[name]?.[index]?.amount}
                   helperText={errors?.[name]?.[index]?.amount?.message}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <AttachMoney
+                        <Payments
                           sx={{
                             color: isIncome ? "success.main" : "error.main",
                           }}
