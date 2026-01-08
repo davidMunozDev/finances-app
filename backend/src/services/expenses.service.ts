@@ -23,6 +23,7 @@ export async function createExpense(params: {
       budgetId,
       cycleId: cycle.id,
       categoryId: body.category_id,
+      provisionId: body.provision_id,
       description: body.description,
       amount: body.amount,
       dateISO,

@@ -25,7 +25,7 @@ export type CompleteOnboardingBody = {
     name: string;
     icon?: string;
   }>;
-  fixed_expenses: Array<{
+  provisions: Array<{
     category_name: string;
     name: string;
     amount: number;
@@ -47,7 +47,7 @@ export async function completeOnboarding(
     budget: data.budget,
     incomes: data.incomes,
     categories: data.categories,
-    fixed_expenses: data.fixed_expenses,
+    provisions: data.provisions,
   };
 
   const response = await defaultServerInstance.patch<AuthUser>(

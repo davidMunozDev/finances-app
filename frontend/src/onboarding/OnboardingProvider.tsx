@@ -7,13 +7,13 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { completeOnboarding } from "./api";
+import { completeOnboarding } from "@/data/onboarding/api";
 import type {
   UserData,
   BudgetData,
   Income,
   OnboardingCategory,
-  FixedExpense,
+  Provision,
   OnboardingData,
 } from "@/data/onboarding/types";
 
@@ -23,7 +23,7 @@ type OnboardingContextType = {
   setBudgetData: (budgetData: BudgetData) => void;
   setIncomes: (incomes: Income[]) => void;
   setCategories: (categories: OnboardingCategory[]) => void;
-  setFixedExpenses: (expenses: FixedExpense[]) => void;
+  setProvisions: (provisions: Provision[]) => void;
   clearOnboardingData: () => void;
   setSubmitHandler: (handler: (() => Promise<boolean>) | null) => void;
   triggerSubmit: () => Promise<boolean>;
@@ -41,7 +41,7 @@ const initialData: OnboardingData = {
   budget: null,
   incomes: [],
   categories: [],
-  fixed_expenses: [],
+  provisions: [],
 };
 
 // Función para cargar datos del localStorage
@@ -86,8 +86,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setData((prev) => ({ ...prev, categories }));
   };
 
-  const setFixedExpenses = (expenses: FixedExpense[]) => {
-    setData((prev) => ({ ...prev, fixed_expenses: expenses }));
+  const setProvisions = (provisions: Provision[]) => {
+    setData((prev) => ({ ...prev, provisions }));
   };
 
   const clearOnboardingData = () => {
@@ -120,7 +120,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         setBudgetData,
         setIncomes,
         setCategories,
-        setFixedExpenses,
+        setProvisions,
         clearOnboardingData,
         setSubmitHandler: (handler) => setSubmitHandler(() => handler),
         triggerSubmit,

@@ -6,6 +6,7 @@ import * as expenses from "../controllers/expenses.controller";
 const router = Router();
 router.use(authMiddleware);
 
+router.get("/budgets/:budgetId/expenses", asyncHandler(expenses.getAll));
 router.post("/budgets/:budgetId/expenses", asyncHandler(expenses.create));
 
 export default router;

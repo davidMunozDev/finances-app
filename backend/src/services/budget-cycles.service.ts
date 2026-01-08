@@ -117,31 +117,6 @@ async function createCycle(budgetId: number, startISO: string, endISO: string) {
   return rows[0];
 }
 
-async function insertFixedTransactions(params: {
-  userId: number;
-  budgetId: number;
-  cycleId: number;
-  dateISO: string;
-}) {
-  // Insert idempotente: unique_key evita duplicados
-  await pool.query(
-    `INSERT INTO transactions (user_id, budget_id, cycle_id, category_id, type, description, amount, date, source, unique_key)
-     SELECT ?, f.budget_id, ?, f.category_id, 'expense', f.name, f.amount, ?, 'fixed',
-            CONCAT('fixed:', f.id, ':cycle:', ?, ':date:', ?)
-     FROM budget_fixed_expenses f
-     WHERE f.budget_id = ?
-     ON DUPLICATE KEY UPDATE transactions.id = transactions.id`,
-    [
-      params.userId,
-      params.cycleId,
-      params.dateISO,
-      params.cycleId,
-      params.dateISO,
-      params.budgetId,
-    ]
-  );
-}
-
 async function insertRecurringTransactionsForCycle(params: {
   userId: number;
   budgetId: number;
@@ -267,15 +242,7 @@ export async function syncBudgetCycle(params: {
     cycle = await createCycle(budget.id, toISO(start), toISO(end));
   }
 
-  // 3) Generar transacciones fijas (en el start_date del ciclo)
-  await insertFixedTransactions({
-    userId: params.userId,
-    budgetId: budget.id,
-    cycleId: cycle.id,
-    dateISO: cycle.start_date,
-  });
-
-  // 4) Generar transacciones recurrentes dentro del ciclo
+  // 3) Generar transacciones recurrentes dentro del ciclo
   await insertRecurringTransactionsForCycle({
     userId: params.userId,
     budgetId: budget.id,

@@ -1,11 +1,14 @@
 import { pool } from "../db";
 import type { DBRow, DBResult } from "../types/db.types";
-import type { FixedExpenseRow, CreateFixedBody } from "../types/fixed.types";
+import type {
+  ProvisionRow,
+  CreateProvisionBody,
+} from "../types/provision.types";
 
-export async function listFixed(budgetId: number) {
-  const [rows] = await pool.query<DBRow<FixedExpenseRow>[]>(
+export async function listProvisions(budgetId: number) {
+  const [rows] = await pool.query<DBRow<ProvisionRow>[]>(
     `SELECT id, budget_id, category_id, name, amount
-     FROM budget_fixed_expenses
+     FROM budget_provisions
      WHERE budget_id = ?
      ORDER BY id DESC`,
     [budgetId]
@@ -13,24 +16,27 @@ export async function listFixed(budgetId: number) {
   return rows;
 }
 
-export async function createFixed(budgetId: number, body: CreateFixedBody) {
+export async function createProvision(
+  budgetId: number,
+  body: CreateProvisionBody
+) {
   const [result] = await pool.query<DBResult>(
-    `INSERT INTO budget_fixed_expenses (budget_id, category_id, name, amount)
+    `INSERT INTO budget_provisions (budget_id, category_id, name, amount)
      VALUES (?, ?, ?, ?)`,
     [budgetId, body.category_id, body.name, body.amount]
   );
   return result.insertId;
 }
 
-export async function deleteFixed(budgetId: number, fixedId: number) {
+export async function deleteProvision(budgetId: number, provisionId: number) {
   const [result] = await pool.query<DBResult>(
-    `DELETE FROM budget_fixed_expenses WHERE id = ? AND budget_id = ?`,
-    [fixedId, budgetId]
+    `DELETE FROM budget_provisions WHERE id = ? AND budget_id = ?`,
+    [provisionId, budgetId]
   );
   return result.affectedRows > 0;
 }
 
-export async function createFixedBulk(params: {
+export async function createProvisionBulk(params: {
   budgetId: number;
   items: Array<{ category_id: number; name: string; amount: number }>;
 }) {
@@ -47,7 +53,7 @@ export async function createFixedBulk(params: {
   }
 
   const [result] = await pool.query<DBResult>(
-    `INSERT INTO budget_fixed_expenses (budget_id, category_id, name, amount)
+    `INSERT INTO budget_provisions (budget_id, category_id, name, amount)
      VALUES ${placeholders}`,
     values
   );
@@ -59,4 +65,14 @@ export async function createFixedBulk(params: {
   const ids = Array.from({ length: count }, (_, i) => firstId + i);
 
   return ids;
+}
+
+export async function getProvisionsTotal(budgetId: number) {
+  const [[row]] = await pool.query<DBRow<{ total: string }>[]>(
+    `SELECT COALESCE(SUM(amount), 0) AS total
+     FROM budget_provisions
+     WHERE budget_id = ?`,
+    [budgetId]
+  );
+  return Number(row.total);
 }

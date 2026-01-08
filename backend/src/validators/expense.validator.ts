@@ -4,6 +4,7 @@ import { z } from "zod";
 const OneTimeExpenseSchema = z.object({
   type: z.literal("one_time"),
   category_id: z.number().int().positive(),
+  provision_id: z.number().int().positive().optional(),
   amount: z.number().positive(),
   description: z.string().max(255).optional(),
   date: z

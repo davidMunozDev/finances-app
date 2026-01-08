@@ -89,21 +89,22 @@ CREATE INDEX idx_cycles_budget ON budget_cycles(budget_id);
 CREATE INDEX idx_cycles_dates ON budget_cycles(start_date, end_date);
 
 -- ======================
--- fixed expenses
+-- budget provisions (planned/allocated expenses)
 -- ======================
-CREATE TABLE budget_fixed_expenses (
+CREATE TABLE budget_provisions (
   id INT AUTO_INCREMENT PRIMARY KEY,
   budget_id INT NOT NULL,
   category_id INT NOT NULL,
   name VARCHAR(255) NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
-  CONSTRAINT fk_fixed_budget
+  CONSTRAINT fk_provisions_budget
     FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE,
-  CONSTRAINT fk_fixed_category
+  CONSTRAINT fk_provisions_category
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
-CREATE INDEX idx_fixed_budget ON budget_fixed_expenses(budget_id);
+CREATE INDEX idx_provisions_budget ON budget_provisions(budget_id);
+CREATE INDEX idx_provisions_category ON budget_provisions(category_id);
 
 -- ======================
 -- recurring expenses
@@ -138,11 +139,12 @@ CREATE TABLE transactions (
   budget_id INT NOT NULL,
   cycle_id INT NOT NULL,
   category_id INT NULL,
+  provision_id INT NULL,
   type ENUM('income','expense') NOT NULL DEFAULT 'expense',
   description VARCHAR(255),
   amount DECIMAL(10,2) NOT NULL,
   date DATE NOT NULL,
-  source ENUM('fixed','recurring','manual') NOT NULL DEFAULT 'manual',
+  source ENUM('recurring','manual') NOT NULL DEFAULT 'manual',
   unique_key VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -153,12 +155,15 @@ CREATE TABLE transactions (
   CONSTRAINT fk_transactions_cycle
     FOREIGN KEY (cycle_id) REFERENCES budget_cycles(id) ON DELETE CASCADE,
   CONSTRAINT fk_transactions_category
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+  CONSTRAINT fk_transactions_provision
+    FOREIGN KEY (provision_id) REFERENCES budget_provisions(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_transactions_user ON transactions(user_id);
 CREATE INDEX idx_transactions_budget ON transactions(budget_id);
 CREATE INDEX idx_transactions_cycle ON transactions(cycle_id);
+CREATE INDEX idx_transactions_provision ON transactions(provision_id);
 CREATE INDEX idx_transactions_date ON transactions(date);
 CREATE INDEX idx_transactions_type ON transactions(type);
 CREATE UNIQUE INDEX uq_transactions_unique_key ON transactions(unique_key);

@@ -44,7 +44,7 @@ export type OnboardingDataBody = {
     name: string;
     icon?: string;
   }>;
-  fixed_expenses: Array<{
+  provisions: Array<{
     category_name: string;
     name: string;
     amount: number;

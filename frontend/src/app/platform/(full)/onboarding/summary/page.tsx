@@ -19,14 +19,16 @@ export default function Summary() {
   const totalIncome = data.incomes.reduce((sum, inc) => sum + inc.amount, 0);
 
   // Calcular gastos por categoría
-  const expensesByCategory = data.fixed_expenses.reduce((acc, expense) => {
-    const existing = acc.find((cat) => cat.category === expense.category_name);
+  const expensesByCategory = data.provisions.reduce((acc, provision) => {
+    const existing = acc.find(
+      (cat) => cat.category === provision.category_name
+    );
     if (existing) {
-      existing.total += expense.amount;
+      existing.total += provision.amount;
     } else {
       acc.push({
-        category: expense.category_name,
-        total: expense.amount,
+        category: provision.category_name,
+        total: provision.amount,
       });
     }
     return acc;

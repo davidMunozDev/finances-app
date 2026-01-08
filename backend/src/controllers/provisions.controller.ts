@@ -4,13 +4,12 @@ import { AppError } from "../errors/app-error";
 import { ERROR_CODES } from "../constants/error-codes";
 import { getBudgetById } from "../services/budgets.service";
 import {
-  listFixed,
-  createFixed,
-  deleteFixed,
-  createFixedBulk,
-} from "../services/fixed.service";
-import { syncBudgetCycle } from "../services/budget-cycles.service";
-import { CreateFixedBulkSchema } from "../validators/fixed.validator";
+  listProvisions,
+  createProvision,
+  deleteProvision,
+  createProvisionBulk,
+} from "../services/provisions.service";
+import { CreateProvisionBulkSchema } from "../validators/provision.validator";
 
 function parseId(v: string) {
   const n = Number(v);
@@ -34,7 +33,7 @@ export async function getAll(req: AuthRequest, res: Response) {
       message: "Presupuesto no encontrado",
     });
 
-  const rows = await listFixed(budgetId);
+  const rows = await listProvisions(budgetId);
   return res.json(rows);
 }
 
@@ -78,20 +77,19 @@ export async function create(req: AuthRequest, res: Response) {
     });
   }
 
-  const id = await createFixed(budgetId, {
+  const id = await createProvision(budgetId, {
     category_id,
     name: name.trim(),
     amount,
   });
-  await syncBudgetCycle({ userId: req.user!.id, budgetId });
 
   return res.status(201).json({ id });
 }
 
 export async function remove(req: AuthRequest, res: Response) {
   const budgetId = parseId(req.params.budgetId);
-  const fixedId = parseId(req.params.fixedId);
-  if (!budgetId || !fixedId)
+  const provisionId = parseId(req.params.provisionId);
+  if (!budgetId || !provisionId)
     throw new AppError({
       status: 400,
       code: ERROR_CODES.VALIDATION_ERROR,
@@ -106,18 +104,18 @@ export async function remove(req: AuthRequest, res: Response) {
       message: "Presupuesto no encontrado",
     });
 
-  const ok = await deleteFixed(budgetId, fixedId);
+  const ok = await deleteProvision(budgetId, provisionId);
   if (!ok)
     throw new AppError({
       status: 404,
       code: ERROR_CODES.NOT_FOUND,
-      message: "Gasto fijo no encontrado",
+      message: "Provisión no encontrada",
     });
 
   return res.status(204).send();
 }
 
-// POST /budgets/:budgetId/fixed-expenses/bulk
+// POST /budgets/:budgetId/provisions/bulk
 export async function createBulk(req: AuthRequest, res: Response) {
   const budgetId = parseId(req.params.budgetId);
   if (!budgetId) {
@@ -137,7 +135,7 @@ export async function createBulk(req: AuthRequest, res: Response) {
     });
   }
 
-  const parsed = CreateFixedBulkSchema.safeParse(req.body);
+  const parsed = CreateProvisionBulkSchema.safeParse(req.body);
   if (!parsed.success) {
     throw new AppError({
       status: 400,
@@ -153,9 +151,7 @@ export async function createBulk(req: AuthRequest, res: Response) {
     amount: i.amount,
   }));
 
-  const ids = await createFixedBulk({ budgetId, items });
-
-  await syncBudgetCycle({ userId: req.user!.id, budgetId });
+  const ids = await createProvisionBulk({ budgetId, items });
 
   return res.status(201).json({
     created: ids.map((id) => ({ id })),

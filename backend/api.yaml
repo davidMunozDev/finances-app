@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Budget App API
   version: 1.0.0
-  description: API para presupuestos con ciclos automáticos, gastos fijos, gastos recurrentes y gastos puntuales.
+  description: API para presupuestos con ciclos automáticos, provisiones de gastos, gastos recurrentes y gastos manuales.
 servers:
   - url: http://localhost:4000
 security:
@@ -11,7 +11,7 @@ tags:
   - name: Auth
   - name: Categories
   - name: Budgets
-  - name: Fixed Expenses
+  - name: Provisions
   - name: Recurring Expenses
   - name: Expenses
   - name: Transactions
@@ -205,7 +205,7 @@ components:
           nullable: true
           example: null
 
-    FixedExpense:
+    Provision:
       type: object
       properties:
         id: { type: integer, example: 1 }
@@ -214,7 +214,7 @@ components:
         name: { type: string, example: "Alquiler" }
         amount: { type: string, example: "750.00" }
 
-    CreateFixedExpenseRequest:
+    CreateProvisionRequest:
       type: object
       required: [category_id, name, amount]
       properties:
@@ -359,7 +359,7 @@ components:
         date: { type: string, example: "2025-01-20" }
         source:
           type: string
-          enum: [fixed, recurring, manual]
+          enum: [recurring, manual]
           example: manual
 
     SummaryResponse:
@@ -372,6 +372,12 @@ components:
         totalSpent:
           type: number
           example: 1234.5
+        totalIncome:
+          type: number
+          example: 2500
+        totalProvisions:
+          type: number
+          example: 800
         transactions:
           type: array
           items:
@@ -530,7 +536,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [user, budget, incomes, categories, fixed_expenses]
+              required: [user, budget, incomes, categories, provisions]
               properties:
                 user:
                   type: object
@@ -570,13 +576,13 @@ paths:
                     properties:
                       name: { type: string, example: "Alimentación" }
                       icon: { type: string, nullable: true, example: "🍔" }
-                fixed_expenses:
+                provisions:
                   type: array
                   items:
                     type: object
-                    required: [category_id, name, amount]
+                    required: [category_name, name, amount]
                     properties:
-                      category_id: { type: integer, example: 1 }
+                      category_name: { type: string, example: "Casa" }
                       name: { type: string, example: "Alquiler" }
                       amount: { type: number, example: 850 }
       responses:
@@ -806,10 +812,10 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorResponse" }
 
-  /budgets/{budgetId}/fixed-expenses:
+  /budgets/{budgetId}/provisions:
     get:
-      tags: [Fixed Expenses]
-      summary: Listar gastos fijos
+      tags: [Provisions]
+      summary: Listar provisiones de gastos planificados
       parameters:
         - in: path
           name: budgetId
@@ -822,11 +828,11 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/FixedExpense" }
+                items: { $ref: "#/components/schemas/Provision" }
 
     post:
-      tags: [Fixed Expenses]
-      summary: Crear gasto fijo
+      tags: [Provisions]
+      summary: Crear provisión de gasto planificado
       parameters:
         - in: path
           name: budgetId
@@ -836,7 +842,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/CreateFixedExpenseRequest" }
+            schema: { $ref: "#/components/schemas/CreateProvisionRequest" }
       responses:
         "201":
           description: Creado
@@ -847,17 +853,17 @@ paths:
                 properties:
                   id: { type: integer, example: 1 }
 
-  /budgets/{budgetId}/fixed-expenses/{fixedId}:
+  /budgets/{budgetId}/provisions/{provisionId}:
     delete:
-      tags: [Fixed Expenses]
-      summary: Eliminar gasto fijo
+      tags: [Provisions]
+      summary: Eliminar provisión de gasto planificado
       parameters:
         - in: path
           name: budgetId
           required: true
           schema: { type: integer }
         - in: path
-          name: fixedId
+          name: provisionId
           required: true
           schema: { type: integer }
       responses:
@@ -869,10 +875,10 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorResponse" }
 
-  /budgets/{budgetId}/fixed-expenses/bulk:
+  /budgets/{budgetId}/provisions/bulk:
     post:
-      tags: [Fixed Expenses]
-      summary: Crear múltiples gastos fijos en una sola petición
+      tags: [Provisions]
+      summary: Crear múltiples provisiones en una sola petición
       parameters:
         - in: path
           name: budgetId
@@ -889,10 +895,10 @@ paths:
                 items:
                   type: array
                   items:
-                    $ref: "#/components/schemas/CreateFixedExpenseRequest"
+                    $ref: "#/components/schemas/CreateProvisionRequest"
       responses:
         "201":
-          description: Gastos fijos creados
+          description: Provisiones creadas
           content:
             application/json:
               schema:
@@ -977,6 +983,79 @@ paths:
               schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   /budgets/{budgetId}/expenses:
+    get:
+      tags: [Expenses]
+      summary: Obtener gastos del presupuesto con filtrado opcional
+      description: |
+        Por defecto devuelve los gastos del ciclo actual.
+        Usar ?all=true para obtener todos los gastos.
+        Usar ?startDate y/o ?endDate para filtrar por rango de fechas.
+      parameters:
+        - in: path
+          name: budgetId
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: all
+          required: false
+          schema: { type: boolean }
+          description: Si es true, devuelve todos los gastos del presupuesto
+        - in: query
+          name: startDate
+          required: false
+          schema:
+            type: string
+            pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            example: "2025-01-01"
+          description: Fecha de inicio del rango (YYYY-MM-DD)
+        - in: query
+          name: endDate
+          required: false
+          schema:
+            type: string
+            pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            example: "2025-12-31"
+          description: Fecha de fin del rango (YYYY-MM-DD)
+      responses:
+        "200":
+          description: Lista de gastos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer, example: 42 }
+                    category_id: { type: integer, nullable: true, example: 5 }
+                    category_name:
+                      { type: string, nullable: true, example: "Alimentación" }
+                    description:
+                      { type: string, example: "Compra supermercado" }
+                    amount: { type: string, example: "45.50" }
+                    date:
+                      {
+                        type: string,
+                        pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                        example: "2025-02-01",
+                      }
+                    type: { type: string, enum: [expense], example: "expense" }
+                    source:
+                      {
+                        type: string,
+                        enum: [fixed, recurring, manual],
+                        example: "manual",
+                      }
+        "400":
+          description: Validación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: Presupuesto no encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
     post:
       tags: [Expenses]
       summary: Endpoint unificado para crear gasto puntual o regla recurrente
@@ -1050,7 +1129,7 @@ paths:
   /budgets/{budgetId}/summary:
     get:
       tags: [Summary]
-      summary: Resumen del ciclo actual (sincroniza ciclo y genera fijos/recurrentes idempotente)
+      summary: Resumen del ciclo actual (sincroniza ciclo y genera recurrentes idempotente)
       parameters:
         - in: path
           name: budgetId

@@ -17,15 +17,15 @@ export const endpoints = {
     byId: (id: string) => `/categories/${id}`,
   },
   expenses: {
+    getAll: (budgetId: string) => `/budgets/${budgetId}/expenses`,
     create: (budgetId: string) => `/budgets/${budgetId}/expenses`,
   },
-  fixedExpenses: {
-    getAll: (budgetId: string) => `/budgets/${budgetId}/fixed-expenses`,
-    create: (budgetId: string) => `/budgets/${budgetId}/fixed-expenses`,
-    createBulk: (budgetId: string) =>
-      `/budgets/${budgetId}/fixed-expenses/bulk`,
-    byId: (budgetId: string, fixedId: string) =>
-      `/budgets/${budgetId}/fixed-expenses/${fixedId}`,
+  provisions: {
+    getAll: (budgetId: string) => `/budgets/${budgetId}/provisions`,
+    create: (budgetId: string) => `/budgets/${budgetId}/provisions`,
+    createBulk: (budgetId: string) => `/budgets/${budgetId}/provisions/bulk`,
+    byId: (budgetId: string, provisionId: string) =>
+      `/budgets/${budgetId}/provisions/${provisionId}`,
   },
   recurringExpenses: {
     getAll: (budgetId: string) => `/budgets/${budgetId}/recurring-expenses`,

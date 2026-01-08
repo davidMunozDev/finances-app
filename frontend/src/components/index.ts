@@ -15,3 +15,7 @@ export { default as ExpenseList } from "./ExpenseList";
 export { default as TransactionItemList } from "./TransactionItemList";
 export { default as AddExpenseCategoryModal } from "./AddExpenseCategoryModal";
 export { default as Loader } from "./Loader";
+export { default as SettingsModal } from "./SettingsModal";
+export { default as CategoryAutocomplete } from "./CategoryAutocomplete";
+export { default as PeriodSelector } from "./PeriodSelector";
+export { default as PeriodDynamicField } from "./PeriodDynamicField";

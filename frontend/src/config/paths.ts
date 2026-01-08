@@ -10,6 +10,7 @@ export const paths = {
   },
   platform: {
     home: `${ROOTS.PLATFORM}/dashboard`,
+    addExpense: `${ROOTS.PLATFORM}/add-expense`,
     onboarding: {
       root: `${ROOTS.PLATFORM}/onboarding`,
       user: `${ROOTS.PLATFORM}/onboarding/user`,

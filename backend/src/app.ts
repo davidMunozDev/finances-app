@@ -7,7 +7,7 @@ import path from "path";
 
 import authRoutes from "./routes/auth.routes";
 import budgetsRoutes from "./routes/budgets.routes";
-import fixedRoutes from "./routes/fixed.routes";
+import provisionsRoutes from "./routes/provisions.routes";
 import recurringRoutes from "./routes/recurring.routes";
 import transactionsRoutes from "./routes/transactions.routes";
 import expensesRoutes from "./routes/expenses.routes";
@@ -39,7 +39,7 @@ app.listen(PORT, () => {
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/auth", authRoutes);
 app.use("/budgets", budgetsRoutes);
-app.use("/", fixedRoutes);
+app.use("/", provisionsRoutes);
 app.use("/", recurringRoutes);
 app.use("/", transactionsRoutes);
 app.use("/", expensesRoutes);

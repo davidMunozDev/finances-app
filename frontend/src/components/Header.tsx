@@ -1,21 +1,12 @@
 "use client";
 
-import {
-  AppBar,
-  Toolbar,
-  IconButton,
-  Box,
-  useMediaQuery,
-  useTheme,
-  Avatar,
-} from "@mui/material";
-import { Settings, MoreVert } from "@mui/icons-material";
-import Link from "next/link";
+import { AppBar, Toolbar, IconButton, Box, Avatar } from "@mui/material";
 import BudgetSelector from "./BudgetSelector";
+import SettingsModal from "./SettingsModal";
+import { useState } from "react";
 
 export default function Header() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <AppBar
@@ -39,65 +30,34 @@ export default function Header() {
         </Box>
 
         {/* Icons */}
-        <Box
+
+        <IconButton
+          onClick={() => setSettingsOpen(true)}
           sx={{
-            display: "flex",
-            gap: { xs: 1, md: 1.5 },
-            alignItems: "center",
+            p: 0,
+            "&:hover": {
+              opacity: 0.8,
+            },
           }}
         >
-          <IconButton
-            component={Link}
-            href="#"
+          <Avatar
             sx={{
-              color: "text.secondary",
-              width: { xs: 40, md: 44 },
-              height: { xs: 40, md: 44 },
-              "&:hover": {
-                backgroundColor: "rgba(47, 126, 248, 0.08)",
-                color: "primary.main",
-              },
+              width: { xs: 36, md: 40 },
+              height: { xs: 36, md: 40 },
+              bgcolor: "primary.main",
+              fontSize: "0.95rem",
+              fontWeight: 600,
             }}
           >
-            <Settings fontSize={isMobile ? "medium" : "medium"} />
-          </IconButton>
-
-          <IconButton
-            component={Link}
-            href="#"
-            sx={{
-              p: 0,
-              "&:hover": {
-                opacity: 0.8,
-              },
-            }}
-          >
-            <Avatar
-              sx={{
-                width: { xs: 36, md: 40 },
-                height: { xs: 36, md: 40 },
-                bgcolor: "primary.main",
-                fontSize: "0.95rem",
-                fontWeight: 600,
-              }}
-            >
-              DM
-            </Avatar>
-          </IconButton>
-
-          {/* {isMobile && (
-            <IconButton
-              sx={{
-                color: "text.secondary",
-                width: 40,
-                height: 40,
-              }}
-            >
-              <MoreVert />
-            </IconButton>
-          )} */}
-        </Box>
+            DM
+          </Avatar>
+        </IconButton>
       </Toolbar>
+
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </AppBar>
   );
 }

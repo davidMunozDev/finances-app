@@ -8,6 +8,7 @@ import {
   removeAccessToken,
   removeUserData,
 } from "@/auth/utils";
+import { paths } from "@/config/paths";
 
 /**
  * Register a new user
@@ -46,6 +47,7 @@ export async function loginUser(data: LoginBody): Promise<AuthResponse> {
  */
 export async function logoutUser(): Promise<void> {
   await defaultServerInstance.post(endpoints.auth.logout);
+  window.location.href = paths.auth.signIn;
 
   // Eliminar el access token y user data del localStorage
   removeAccessToken();
@@ -65,6 +67,7 @@ export async function getCurrentUser(): Promise<AuthUser> {
  */
 export async function deleteUserAccount(): Promise<void> {
   await defaultServerInstance.delete(endpoints.auth.delete);
+  window.location.href = paths.auth.signIn;
 
   // Eliminar el access token y user data del localStorage
   removeAccessToken();

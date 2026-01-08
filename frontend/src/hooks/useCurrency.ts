@@ -2,7 +2,6 @@
 
 import { useCallback } from "react";
 import { useCurrentUser } from "@/data/auth/hooks";
-import { useOnboarding } from "@/onboarding";
 import {
   formatCurrency as formatCurrencyUtil,
   getCurrencySymbol as getCurrencySymbolUtil,
@@ -17,9 +16,7 @@ import {
  */
 export function useCurrency() {
   const { user } = useCurrentUser();
-  const onboarding = useOnboarding?.();
-  const currencyCode =
-    user?.default_currency || onboarding?.data?.user?.default_currency || "EUR";
+  const currencyCode = user?.default_currency || "EUR";
   const symbol = getCurrencySymbolUtil(currencyCode);
   const formatCurrency = useCallback(
     (amount: number) => formatCurrencyUtil(amount, currencyCode),

@@ -1,11 +1,10 @@
 export { OnboardingProvider, useOnboarding } from "./OnboardingProvider";
 export { OnboardingGuard } from "./OnboardingGuard";
-export { completeOnboarding } from "@/data/onboarding/api";
 export type {
   UserData,
   BudgetData,
   Income,
   OnboardingCategory,
-  FixedExpense,
+  Provision,
   OnboardingData,
 } from "@/data/onboarding/types";

@@ -386,7 +386,7 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
     !data.budget ||
     !data.incomes ||
     !data.categories ||
-    !data.fixed_expenses
+    !data.provisions
   ) {
     throw new AppError({
       status: HTTP_STATUS.BAD_REQUEST,
@@ -433,20 +433,20 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
       categoryMap.set(cat.name, catResult.insertId);
     }
 
-    // 4. Crear gastos fijos recurrentes
-    for (const expense of data.fixed_expenses) {
-      const categoryId = categoryMap.get(expense.category_name);
+    // 4. Crear provisiones de gastos planificados
+    for (const provision of data.provisions) {
+      const categoryId = categoryMap.get(provision.category_name);
       if (!categoryId) {
         throw new AppError({
           status: HTTP_STATUS.BAD_REQUEST,
           code: ERROR_CODES.VALIDATION_ERROR,
-          message: `Categoría '${expense.category_name}' no encontrada`,
+          message: `Categoría '${provision.category_name}' no encontrada`,
         });
       }
       await connection.query(
-        `INSERT INTO budget_fixed_expenses (budget_id, category_id, name, amount)
+        `INSERT INTO budget_provisions (budget_id, category_id, name, amount)
          VALUES (?, ?, ?, ?)`,
-        [budgetId, categoryId, expense.name, expense.amount]
+        [budgetId, categoryId, provision.name, provision.amount]
       );
     }
 

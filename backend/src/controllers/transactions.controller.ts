@@ -10,6 +10,7 @@ import {
   getCycleTotals,
   getCycleIncomes,
 } from "../services/transactions.service";
+import { getProvisionsTotal } from "../services/provisions.service";
 
 function parseId(v: string) {
   const n = Number(v);
@@ -41,7 +42,8 @@ export async function addManual(req: AuthRequest, res: Response) {
       message: "No se pudo resolver el ciclo actual",
     });
 
-  const { category_id, amount, description, date } = req.body ?? {};
+  const { category_id, provision_id, amount, description, date } =
+    req.body ?? {};
   if (!Number.isInteger(category_id) || category_id <= 0)
     throw new AppError({
       status: 400,
@@ -63,6 +65,7 @@ export async function addManual(req: AuthRequest, res: Response) {
     budgetId,
     cycleId: cycle.id,
     categoryId: category_id,
+    provisionId: provision_id,
     description,
     amount,
     dateISO,
@@ -111,12 +114,14 @@ export async function currentSummary(req: AuthRequest, res: Response) {
     budgetId,
     cycleId: cycle.id,
   });
+  const totalProvisions = await getProvisionsTotal(budgetId);
 
   return res.json({
     budget,
     cycle,
     totalSpent,
     totalIncome,
+    totalProvisions,
     transactions: tx,
   });
 }

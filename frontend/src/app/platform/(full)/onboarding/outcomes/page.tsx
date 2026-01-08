@@ -54,7 +54,7 @@ interface OutcomesProps {
 }
 
 export default function Outcomes({ totalIncome = 0 }: OutcomesProps) {
-  const { data, setCategories, setFixedExpenses, setSubmitHandler } =
+  const { data, setCategories, setProvisions, setSubmitHandler } =
     useOnboarding();
   const { formatCurrency } = useCurrency();
   const { categories: apiCategories } = useCategories();
@@ -94,16 +94,16 @@ export default function Outcomes({ totalIncome = 0 }: OutcomesProps) {
 
   // Cargar categorías guardadas del contexto al montar (solo una vez)
   useEffect(() => {
-    if (!isLoaded && data.fixed_expenses.length > 0) {
-      // Reconstruir las categorías desde los gastos fijos guardados
+    if (!isLoaded && data.provisions.length > 0) {
+      // Reconstruir las categorías desde las provisiones guardadas
       const categoriesMap = new Map<string, ExpenseCategory>();
 
-      data.fixed_expenses.forEach((expense) => {
-        const categoryKey = expense.category_name;
+      data.provisions.forEach((provision) => {
+        const categoryKey = provision.category_name;
         if (!categoriesMap.has(categoryKey)) {
           categoriesMap.set(categoryKey, {
             id: Date.now().toString() + Math.random(),
-            category: expense.category_name,
+            category: provision.category_name,
             period: "monthly", // Default, ya que no guardamos este dato
             expenses: [],
             total: 0,
@@ -112,18 +112,18 @@ export default function Outcomes({ totalIncome = 0 }: OutcomesProps) {
 
         const category = categoriesMap.get(categoryKey)!;
         category.expenses.push({
-          name: expense.name,
-          amount: expense.amount,
+          name: provision.name,
+          amount: provision.amount,
         });
-        category.total += expense.amount;
+        category.total += provision.amount;
       });
 
       setLocalCategories(Array.from(categoriesMap.values()));
       setIsLoaded(true);
-    } else if (!isLoaded && data.fixed_expenses.length === 0) {
+    } else if (!isLoaded && data.provisions.length === 0) {
       setIsLoaded(true);
     }
-  }, [data.fixed_expenses, isLoaded]);
+  }, [data.provisions, isLoaded]);
 
   // Registrar handler que siempre permite continuar
   useEffect(() => {
@@ -138,8 +138,8 @@ export default function Outcomes({ totalIncome = 0 }: OutcomesProps) {
       new Set(categories.map((cat) => cat.category))
     ).map((name) => ({ name, icon: "📁" }));
 
-    // Extraer gastos fijos
-    const fixedExpenses = categories.flatMap((cat) =>
+    // Extraer provisiones de gastos
+    const provisions = categories.flatMap((cat) =>
       cat.expenses.map((exp) => ({
         category_name: cat.category,
         name: exp.name,
@@ -148,8 +148,8 @@ export default function Outcomes({ totalIncome = 0 }: OutcomesProps) {
     );
 
     setCategories(uniqueCategories);
-    setFixedExpenses(fixedExpenses);
-  }, [categories, setCategories, setFixedExpenses]);
+    setProvisions(provisions);
+  }, [categories, setCategories, setProvisions]);
 
   const onSubmit = (data: ExpenseFormData) => {
     const total = data.expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -309,6 +309,7 @@ export default function Outcomes({ totalIncome = 0 }: OutcomesProps) {
         remainingAmount={remainingAmount}
         period={period}
         existingCategories={existingCategories}
+        showPeriodFields={false}
       />
     </Box>
   );

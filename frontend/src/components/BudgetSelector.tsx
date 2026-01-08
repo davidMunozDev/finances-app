@@ -1,20 +1,51 @@
 "use client";
 
-import { Select, MenuItem, FormControl, Typography } from "@mui/material";
+import {
+  Select,
+  MenuItem,
+  FormControl,
+  Typography,
+  Skeleton,
+} from "@mui/material";
 import { KeyboardArrowDown } from "@mui/icons-material";
-import { useState } from "react";
+import { useBudget } from "@/budget/BudgetProvider";
 
 export default function BudgetSelector() {
-  const [selectedBudget, setSelectedBudget] = useState("Hogar");
+  const { budgets, currentBudget, isLoading, setCurrentBudget } = useBudget();
 
-  // Datos de ejemplo - reemplazar con datos reales
-  const budgets = ["Hogar", "Personal", "Negocios", "Vacaciones"];
+  // Show loading skeleton while budgets are being fetched
+  if (isLoading) {
+    return (
+      <Skeleton
+        variant="text"
+        width={200}
+        height={32}
+        sx={{ bgcolor: "action.hover" }}
+      />
+    );
+  }
+
+  // No budgets available
+  if (budgets.length === 0) {
+    return (
+      <Typography
+        variant="h6"
+        sx={{
+          fontWeight: 700,
+          fontSize: { xs: "1.125rem", md: "1.25rem" },
+          color: "text.secondary",
+        }}
+      >
+        Sin presupuestos
+      </Typography>
+    );
+  }
 
   return (
     <FormControl variant="standard" sx={{ minWidth: { xs: 120, md: 200 } }}>
       <Select
-        value={selectedBudget}
-        onChange={(e) => setSelectedBudget(e.target.value)}
+        value={currentBudget?.id || ""}
+        onChange={(e) => setCurrentBudget(e.target.value as number)}
         disableUnderline
         IconComponent={KeyboardArrowDown}
         sx={{
@@ -37,23 +68,26 @@ export default function BudgetSelector() {
             right: -4,
           },
         }}
-        renderValue={(value) => (
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              fontSize: { xs: "1.125rem", md: "1.25rem" },
-              color: "text.primary",
-            }}
-          >
-            {value}
-          </Typography>
-        )}
+        renderValue={(value) => {
+          const budget = budgets.find((b) => b.id === value);
+          return (
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: "1.125rem", md: "1.25rem" },
+                color: "text.primary",
+              }}
+            >
+              {budget?.name || "Seleccionar presupuesto"}
+            </Typography>
+          );
+        }}
       >
         {budgets.map((budget) => (
           <MenuItem
-            key={budget}
-            value={budget}
+            key={budget.id}
+            value={budget.id}
             sx={{
               fontSize: "1rem",
               fontWeight: 500,
@@ -61,7 +95,7 @@ export default function BudgetSelector() {
               px: 2,
             }}
           >
-            {budget}
+            {budget.name}
           </MenuItem>
         ))}
       </Select>

@@ -23,7 +23,7 @@ export type OnboardingCategory = {
   icon?: string;
 };
 
-export type FixedExpense = {
+export type Provision = {
   category_name: string;
   name: string;
   amount: number;
@@ -34,5 +34,5 @@ export type OnboardingData = {
   budget: BudgetData | null;
   incomes: Income[];
   categories: OnboardingCategory[];
-  fixed_expenses: FixedExpense[];
+  provisions: Provision[];
 };

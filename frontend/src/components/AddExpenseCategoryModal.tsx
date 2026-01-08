@@ -8,20 +8,15 @@ import {
   Box,
   Button,
   Typography,
-  InputAdornment,
-  Autocomplete,
-  TextField,
 } from "@mui/material";
+import { Close } from "@mui/icons-material";
 import {
-  CategoryOutlined,
-  CalendarTodayOutlined,
-  EventOutlined,
-  Close,
-} from "@mui/icons-material";
-import { FormTextField, FormSelect } from "@/components";
+  CategoryAutocomplete,
+  PeriodSelector,
+  PeriodDynamicField,
+} from "@/components";
 import ExpenseList from "./ExpenseList";
-import { Control, Controller } from "react-hook-form";
-import { PERIODS, DAYS_OF_WEEK, DAYS_OF_MONTH } from "@/config/budget";
+import { Control } from "react-hook-form";
 import { useCurrency } from "@/hooks/useCurrency";
 
 interface AddExpenseCategoryModalProps {
@@ -33,6 +28,7 @@ interface AddExpenseCategoryModalProps {
   remainingAmount: number;
   period: string;
   existingCategories: string[];
+  showPeriodFields?: boolean;
 }
 
 export default function AddExpenseCategoryModal({
@@ -44,86 +40,9 @@ export default function AddExpenseCategoryModal({
   remainingAmount,
   period,
   existingCategories,
+  showPeriodFields = true,
 }: AddExpenseCategoryModalProps) {
   const { formatCurrency } = useCurrency();
-
-  const renderPeriodField = () => {
-    switch (period) {
-      case "weekly":
-        return (
-          <Controller
-            name="dayOfWeek"
-            control={control}
-            render={({ field }) => (
-              <FormSelect
-                {...field}
-                label="Día de inicio"
-                error={!!errors.dayOfWeek}
-                startIcon={
-                  <CalendarTodayOutlined sx={{ color: "text.secondary" }} />
-                }
-                options={DAYS_OF_WEEK.map((day) => ({
-                  value: day.value,
-                  label: day.label,
-                }))}
-              />
-            )}
-          />
-        );
-      case "monthly":
-        return (
-          <Controller
-            name="dayOfMonth"
-            control={control}
-            render={({ field }) => (
-              <FormSelect
-                {...field}
-                label="Día del mes"
-                error={!!errors.dayOfMonth}
-                startIcon={
-                  <CalendarTodayOutlined sx={{ color: "text.secondary" }} />
-                }
-                options={DAYS_OF_MONTH.map((day) => ({
-                  value: day.value,
-                  label: day.label,
-                }))}
-              />
-            )}
-          />
-        );
-      case "yearly":
-        return (
-          <Controller
-            name="yearlyDate"
-            control={control}
-            render={({ field }) => (
-              <FormTextField
-                {...field}
-                label="Fecha de inicio"
-                type="date"
-                error={!!errors.yearlyDate}
-                helperText={errors.yearlyDate?.message}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <EventOutlined sx={{ color: "text.secondary" }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    bgcolor: "background.paper",
-                  },
-                }}
-              />
-            )}
-          />
-        );
-      default:
-        return null;
-    }
-  };
 
   return (
     <Dialog
@@ -170,83 +89,27 @@ export default function AddExpenseCategoryModal({
       <DialogContent sx={{ pt: 3, px: 3, maxWidth: 600, mx: "auto" }}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {/* Campo Categoría con Autocomplete */}
-          <Controller
-            name="category"
-            control={control}
-            render={({ field: { onChange, value } }) => (
-              <Autocomplete
-                freeSolo
-                value={value}
-                onChange={(_, newValue) => onChange(newValue)}
-                onInputChange={(_, newValue) => onChange(newValue)}
-                options={existingCategories}
-                sx={{ mt: 2 }}
-                renderInput={(params) => (
-                  <Box>
-                    <Typography
-                      component="label"
-                      sx={{
-                        display: "block",
-                        fontSize: "0.875rem",
-                        fontWeight: "medium",
-                        color: "text.primary",
-                        mb: 0.75,
-                      }}
-                    >
-                      Categoría
-                    </Typography>
-                    <TextField
-                      {...params}
-                      placeholder="Ej: Casa, Transporte, Ocio"
-                      error={!!errors.category}
-                      helperText={errors.category?.message}
-                      InputProps={{
-                        ...params.InputProps,
-                        startAdornment: (
-                          <>
-                            <InputAdornment position="start">
-                              <CategoryOutlined
-                                sx={{ color: "text.secondary" }}
-                              />
-                            </InputAdornment>
-                            {params.InputProps.startAdornment}
-                          </>
-                        ),
-                        sx: {
-                          borderRadius: 2,
-                          bgcolor: "background.paper",
-                        },
-                      }}
-                    />
-                  </Box>
-                )}
-              />
-            )}
-          />
+          <Box sx={{ mt: 2 }}>
+            <CategoryAutocomplete
+              control={control}
+              error={errors.category}
+              existingCategories={existingCategories}
+            />
+          </Box>
 
           {/* Selector de Periodo */}
-          <Controller
-            name="period"
-            control={control}
-            render={({ field }) => (
-              <FormSelect
-                {...field}
-                label="Periodo"
-                error={!!errors.period}
-                startIcon={
-                  <CalendarTodayOutlined sx={{ color: "text.secondary" }} />
-                }
-                options={PERIODS.map((p) => ({
-                  value: p.value,
-                  label: p.label,
-                  subtitle: p.subtitle,
-                }))}
-              />
-            )}
-          />
+          {showPeriodFields && (
+            <PeriodSelector control={control} error={errors.period} />
+          )}
 
           {/* Campo dinámico según el periodo */}
-          {renderPeriodField()}
+          {showPeriodFields && (
+            <PeriodDynamicField
+              control={control}
+              period={period}
+              errors={errors}
+            />
+          )}
 
           {/* Lista de Gastos */}
           <Box>
