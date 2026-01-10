@@ -178,4 +178,5 @@ INSERT INTO categories (user_id, name, icon) VALUES
   (NULL, 'Ocio', '🎉'),
   (NULL, 'Servicios', '💡'),
   (NULL, 'Salud', '⚕️'),
-  (NULL, 'Educación', '📚');
+  (NULL, 'Educación', '📚'),
+  (NULL, 'Otros', '📦');

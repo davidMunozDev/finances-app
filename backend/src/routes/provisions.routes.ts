@@ -8,6 +8,10 @@ router.use(authMiddleware);
 
 router.get("/budgets/:budgetId/provisions", asyncHandler(provisions.getAll));
 router.post("/budgets/:budgetId/provisions", asyncHandler(provisions.create));
+router.put(
+  "/budgets/:budgetId/provisions/:provisionId",
+  asyncHandler(provisions.update)
+);
 router.delete(
   "/budgets/:budgetId/provisions/:provisionId",
   asyncHandler(provisions.remove)

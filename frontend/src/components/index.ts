@@ -19,3 +19,12 @@ export { default as SettingsModal } from "./SettingsModal";
 export { default as CategoryAutocomplete } from "./CategoryAutocomplete";
 export { default as PeriodSelector } from "./PeriodSelector";
 export { default as PeriodDynamicField } from "./PeriodDynamicField";
+export { default as BudgetTabs } from "./BudgetTabs";
+export { default as NavigationTabs } from "./NavigationTabs";
+export { default as CategoryChart } from "./CategoryChart";
+export { default as EditableIncomeCard } from "./EditableIncomeCard";
+export { default as EditableCategorySection } from "./EditableCategorySection";
+export type {
+  CategoryWithProvisions,
+  ProvisionItem,
+} from "./EditableCategorySection/types";

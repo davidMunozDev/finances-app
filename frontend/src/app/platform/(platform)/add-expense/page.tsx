@@ -17,9 +17,9 @@ import CategoryAutocomplete from "@/components/CategoryAutocomplete";
 import PeriodSelector from "@/components/PeriodSelector";
 import PeriodDynamicField from "@/components/PeriodDynamicField";
 import { useCategories } from "@/data/categories/hooks";
-import type { Category } from "@/data/categories/types";
 import { useBudget } from "@/budget/BudgetProvider";
 import { createExpense } from "@/data/expenses/api";
+import { useProvisions } from "@/data/provisions";
 import { paths } from "@/config/paths";
 
 // Validation schema with conditional logic
@@ -30,6 +30,7 @@ const expenseSchema = z
       .positive("La cantidad debe ser mayor que 0"),
     budgetId: z.string().min(1, "Selecciona un presupuesto"),
     category: z.string().min(1, "La categoría es requerida"),
+    provisionId: z.string().optional(),
     name: z.string().min(1, "El nombre del gasto es requerido"),
     isOneTime: z.boolean(),
     period: z.enum(["weekly", "monthly", "yearly"]).optional(),
@@ -37,6 +38,18 @@ const expenseSchema = z
     dayOfMonth: z.string().optional(),
     yearlyDate: z.string().optional(),
   })
+  .refine(
+    (data) => {
+      if (data.category !== "Otros" && !data.provisionId) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Selecciona una provisión",
+      path: ["provisionId"],
+    }
+  )
   .refine(
     (data) => {
       // If recurring, period is required
@@ -98,6 +111,12 @@ export default function AddExpensePage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string>("");
+  const {
+    provisions,
+    isLoading: provisionsLoading,
+    mutate: mutateProvisions,
+  } = useProvisions(selectedBudgetId);
 
   // Map budgets to select options
   const budgetOptions = budgets.map((budget) => ({
@@ -117,6 +136,7 @@ export default function AddExpensePage() {
       amount: undefined,
       budgetId: currentBudget ? currentBudget.id.toString() : "",
       category: "",
+      provisionId: "",
       isOneTime: true,
       name: "",
       period: "monthly",
@@ -134,8 +154,16 @@ export default function AddExpensePage() {
   }, [currentBudget, setValue, watch]);
 
   // Watch values for conditional rendering
+  const budgetId = watch("budgetId");
+  const category = watch("category");
+  const provisionId = watch("provisionId");
   const isOneTime = watch("isOneTime");
   const period = watch("period");
+
+  // Update selectedBudgetId when budgetId changes
+  useEffect(() => {
+    setSelectedBudgetId(budgetId);
+  }, [budgetId]);
 
   useEffect(() => {
     if (!isOneTime && period) {
@@ -152,6 +180,36 @@ export default function AddExpensePage() {
       }
     }
   }, [period, isOneTime, setValue]);
+
+  // Reset provisionId when category changes
+  useEffect(() => {
+    setValue("provisionId", "");
+  }, [category, setValue]);
+
+  // Filter provisions by selected category
+  const selectedCategory = categories.find((cat) => cat.name === category);
+  const filteredProvisions = provisions.filter(
+    (provision) => provision.category_id === selectedCategory?.id
+  );
+
+  // Auto-select first provision if only one is available for the category
+  useEffect(() => {
+    if (filteredProvisions.length === 1 && !provisionId) {
+      setValue("provisionId", filteredProvisions[0].id.toString());
+    }
+  }, [filteredProvisions, provisionId, setValue]);
+
+  // Auto-fill name when provision is selected
+  useEffect(() => {
+    if (provisionId) {
+      const selectedProvision = provisions.find(
+        (p) => p.id.toString() === provisionId
+      );
+      if (selectedProvision) {
+        setValue("name", selectedProvision.name);
+      }
+    }
+  }, [provisionId, provisions, setValue]);
 
   const onSubmit = async (data: ExpenseFormData) => {
     setIsSubmitting(true);
@@ -177,9 +235,8 @@ export default function AddExpensePage() {
           amount: data.amount,
           description: data.name,
           date: new Date().toISOString().slice(0, 10), // YYYY-MM-DD
+          ...(data.provisionId && { provision_id: parseInt(data.provisionId) }),
         };
-
-        await createExpense(data.budgetId, payload);
       } else {
         // Recurring expense
         const schedule: {
@@ -212,6 +269,7 @@ export default function AddExpensePage() {
         };
       }
       await createExpense(data.budgetId, payload);
+      mutateProvisions(); // Refresh provisions list
       router.push(paths.platform.home);
     } catch (err) {
       console.error("Error creating expense:", err);
@@ -225,8 +283,13 @@ export default function AddExpensePage() {
     }
   };
 
-  // Get existing category names for autocomplete
-  const existingCategories = categories?.map((cat: Category) => cat.name) || [];
+  // Get existing category names for autocomplete - only categories with provisions + 'Otros'
+  const categoriesWithProvisions = categories.filter(
+    (cat) =>
+      cat.name === "Otros" ||
+      provisions.some((provision) => provision.category_id === cat.id)
+  );
+  const existingCategories = categoriesWithProvisions.map((cat) => cat.name);
 
   return (
     <Box
@@ -346,6 +409,36 @@ export default function AddExpensePage() {
           existingCategories={existingCategories}
         />
 
+        {/* Provision Selector - Only show if category is not 'Otros' */}
+        {category && category !== "Otros" && (
+          <>
+            <Controller
+              name="provisionId"
+              control={control}
+              render={({ field }) => (
+                <FormSelect
+                  {...field}
+                  label="Provisión"
+                  options={filteredProvisions.map((provision) => ({
+                    value: provision.id.toString(),
+                    label: provision.name,
+                  }))}
+                  error={!!errors.provisionId}
+                  disabled={provisionsLoading}
+                />
+              )}
+            />
+            {errors.provisionId && (
+              <Typography
+                variant="caption"
+                sx={{ color: "error.main", mt: -2, ml: 1.75 }}
+              >
+                {errors.provisionId.message}
+              </Typography>
+            )}
+          </>
+        )}
+
         {/* Name Field */}
         <Controller
           name="name"
@@ -353,7 +446,7 @@ export default function AddExpensePage() {
           render={({ field }) => (
             <FormTextField
               {...field}
-              label="Nombre del gasto"
+              label="Nombre"
               placeholder="Ej: Comida, Alquiler, Netflix"
               error={!!errors.name}
               helperText={errors.name?.message}

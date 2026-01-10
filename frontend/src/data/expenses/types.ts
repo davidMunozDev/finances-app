@@ -21,6 +21,7 @@ export interface CreateExpenseOneTime {
   amount: number;
   description?: string;
   date?: string; // YYYY-MM-DD
+  provision_id?: number;
 }
 
 export interface CreateExpenseRecurring {

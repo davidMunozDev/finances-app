@@ -39,7 +39,8 @@ export default function CategoryList({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            py: 1.5,
+            pt: index === 0 ? 0 : 1.5,
+            pb: index < categories.length - 1 ? 1.5 : 0,
             borderBottom:
               index < categories.length - 1
                 ? (theme) => `1px solid ${theme.palette.divider}`
@@ -62,7 +63,9 @@ export default function CategoryList({
                 color: "text.primary",
               }}
             >
-              {category.category}
+              {category.category.length > 20
+                ? category.category.substring(0, 20) + "..."
+                : category.category}
             </Typography>
           </Box>
           <Typography

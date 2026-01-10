@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Box,
-  Typography,
-  TextField,
-  Autocomplete,
-  InputAdornment,
-} from "@mui/material";
-import { CategoryOutlined } from "@mui/icons-material";
+import { Box, Typography, TextField, Autocomplete } from "@mui/material";
 import { Control, Controller, FieldError } from "react-hook-form";
 
 interface CategoryAutocompleteProps {
@@ -59,14 +52,6 @@ export default function CategoryAutocomplete({
                 helperText={error?.message}
                 InputProps={{
                   ...params.InputProps,
-                  startAdornment: (
-                    <>
-                      <InputAdornment position="start">
-                        <CategoryOutlined sx={{ color: "text.secondary" }} />
-                      </InputAdornment>
-                      {params.InputProps.startAdornment}
-                    </>
-                  ),
                   sx: {
                     borderRadius: 2,
                     bgcolor: "background.paper",

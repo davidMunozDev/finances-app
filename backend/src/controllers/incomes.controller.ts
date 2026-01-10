@@ -9,6 +9,8 @@ import { syncBudgetCycle } from "../services/budget-cycles.service";
 import {
   createManualIncome,
   listCycleIncomes,
+  updateIncome,
+  deleteIncome,
 } from "../services/incomes.service";
 
 function parseId(v: string) {
@@ -104,4 +106,97 @@ export async function getAll(req: AuthRequest, res: Response) {
     cycleId: cycle.id,
   });
   return res.json({ cycle, incomes });
+}
+
+// PUT /budgets/:budgetId/incomes/:incomeId
+export async function update(req: AuthRequest, res: Response) {
+  const budgetId = parseId(req.params.budgetId);
+  const incomeId = parseId(req.params.incomeId);
+
+  if (!budgetId || !incomeId) {
+    throw new AppError({
+      status: HTTP_STATUS.BAD_REQUEST,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "budgetId o incomeId inválido",
+    });
+  }
+
+  const budget = await getBudgetById(req.user!.id, budgetId);
+  if (!budget) {
+    throw new AppError({
+      status: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.NOT_FOUND,
+      message: "Presupuesto no encontrado",
+    });
+  }
+
+  const { amount, description, date } = req.body ?? {};
+  if (typeof amount !== "number" || amount <= 0) {
+    throw new AppError({
+      status: HTTP_STATUS.BAD_REQUEST,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "amount inválido",
+    });
+  }
+
+  const dateISO =
+    typeof date === "string" ? date : new Date().toISOString().slice(0, 10);
+
+  const updated = await updateIncome({
+    userId: req.user!.id,
+    budgetId,
+    incomeId,
+    description,
+    amount,
+    dateISO,
+  });
+
+  if (!updated) {
+    throw new AppError({
+      status: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.NOT_FOUND,
+      message: "Ingreso no encontrado",
+    });
+  }
+
+  return res.json({ success: true });
+}
+
+// DELETE /budgets/:budgetId/incomes/:incomeId
+export async function remove(req: AuthRequest, res: Response) {
+  const budgetId = parseId(req.params.budgetId);
+  const incomeId = parseId(req.params.incomeId);
+
+  if (!budgetId || !incomeId) {
+    throw new AppError({
+      status: HTTP_STATUS.BAD_REQUEST,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "budgetId o incomeId inválido",
+    });
+  }
+
+  const budget = await getBudgetById(req.user!.id, budgetId);
+  if (!budget) {
+    throw new AppError({
+      status: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.NOT_FOUND,
+      message: "Presupuesto no encontrado",
+    });
+  }
+
+  const deleted = await deleteIncome({
+    userId: req.user!.id,
+    budgetId,
+    incomeId,
+  });
+
+  if (!deleted) {
+    throw new AppError({
+      status: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.NOT_FOUND,
+      message: "Ingreso no encontrado",
+    });
+  }
+
+  return res.json({ success: true });
 }

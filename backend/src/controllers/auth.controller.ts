@@ -426,11 +426,28 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
     // 3. Crear categorías personalizadas y mapear nombres a IDs
     const categoryMap = new Map<string, number>();
     for (const cat of data.categories) {
-      const [catResult] = await connection.query<DBResult>(
-        "INSERT INTO categories (user_id, name, icon) VALUES (?, ?, ?)",
-        [userId, cat.name, cat.icon ?? null]
+      // Check if category already exists (global or user-specific)
+      const [existing] = await connection.query<DBRow<{ id: number }>[]>(
+        `SELECT id FROM categories 
+         WHERE name = ? AND (user_id IS NULL OR user_id = ?)
+         LIMIT 1`,
+        [cat.name, userId]
       );
-      categoryMap.set(cat.name, catResult.insertId);
+
+      let categoryId: number;
+      if (existing.length > 0) {
+        // Use existing category
+        categoryId = existing[0].id;
+      } else {
+        // Create new user-specific category
+        const [catResult] = await connection.query<DBResult>(
+          "INSERT INTO categories (user_id, name, icon) VALUES (?, ?, ?)",
+          [userId, cat.name, cat.icon ?? null]
+        );
+        categoryId = catResult.insertId;
+      }
+
+      categoryMap.set(cat.name, categoryId);
     }
 
     // 4. Crear provisiones de gastos planificados

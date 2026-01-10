@@ -36,6 +36,28 @@ export async function deleteProvision(budgetId: number, provisionId: number) {
   return result.affectedRows > 0;
 }
 
+export async function updateProvision(params: {
+  budgetId: number;
+  provisionId: number;
+  name: string;
+  amount: number;
+  category_id: number;
+}) {
+  const [result] = await pool.query<DBResult>(
+    `UPDATE budget_provisions
+     SET name = ?, amount = ?, category_id = ?
+     WHERE id = ? AND budget_id = ?`,
+    [
+      params.name,
+      params.amount,
+      params.category_id,
+      params.provisionId,
+      params.budgetId,
+    ]
+  );
+  return result.affectedRows > 0;
+}
+
 export async function createProvisionBulk(params: {
   budgetId: number;
   items: Array<{ category_id: number; name: string; amount: number }>;

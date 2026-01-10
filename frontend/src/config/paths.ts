@@ -11,6 +11,7 @@ export const paths = {
   platform: {
     home: `${ROOTS.PLATFORM}/dashboard`,
     addExpense: `${ROOTS.PLATFORM}/add-expense`,
+    budget: `${ROOTS.PLATFORM}/budget`,
     onboarding: {
       root: `${ROOTS.PLATFORM}/onboarding`,
       user: `${ROOTS.PLATFORM}/onboarding/user`,

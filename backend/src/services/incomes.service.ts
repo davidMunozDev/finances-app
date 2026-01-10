@@ -39,3 +39,40 @@ export async function listCycleIncomes(params: {
   );
   return rows;
 }
+
+export async function updateIncome(params: {
+  userId: number;
+  budgetId: number;
+  incomeId: number;
+  description?: string;
+  amount: number;
+  dateISO: string;
+}) {
+  const [result] = await pool.query<DBResult>(
+    `UPDATE transactions
+     SET description = ?, amount = ?, date = ?
+     WHERE id = ? AND user_id = ? AND budget_id = ? AND type = 'income'`,
+    [
+      params.description ?? null,
+      params.amount,
+      params.dateISO,
+      params.incomeId,
+      params.userId,
+      params.budgetId,
+    ]
+  );
+  return result.affectedRows > 0;
+}
+
+export async function deleteIncome(params: {
+  userId: number;
+  budgetId: number;
+  incomeId: number;
+}) {
+  const [result] = await pool.query<DBResult>(
+    `DELETE FROM transactions
+     WHERE id = ? AND user_id = ? AND budget_id = ? AND type = 'income'`,
+    [params.incomeId, params.userId, params.budgetId]
+  );
+  return result.affectedRows > 0;
+}

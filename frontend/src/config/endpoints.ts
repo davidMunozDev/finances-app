@@ -20,6 +20,12 @@ export const endpoints = {
     getAll: (budgetId: string) => `/budgets/${budgetId}/expenses`,
     create: (budgetId: string) => `/budgets/${budgetId}/expenses`,
   },
+  incomes: {
+    getAll: (budgetId: string) => `/budgets/${budgetId}/incomes`,
+    create: (budgetId: string) => `/budgets/${budgetId}/incomes`,
+    byId: (budgetId: string, incomeId: string) =>
+      `/budgets/${budgetId}/incomes/${incomeId}`,
+  },
   provisions: {
     getAll: (budgetId: string) => `/budgets/${budgetId}/provisions`,
     create: (budgetId: string) => `/budgets/${budgetId}/provisions`,
