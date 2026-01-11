@@ -16,5 +16,5 @@ export const mainNavItems = [
     icon: TrendingDown,
     href: paths.platform.expenses.completed,
   },
-  { text: "Chat IA", icon: Try, href: "#" },
+  { text: "Chat IA", icon: Try, href: paths.platform.chat },
 ];

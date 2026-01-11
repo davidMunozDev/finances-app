@@ -1,6 +1,6 @@
 import { defaultServerInstance } from "@/config/servers";
 import { endpoints } from "@/config/endpoints";
-import type { RecurringExpense } from "./types";
+import type { RecurringExpense, CreateRecurringExpenseBody } from "./types";
 
 /**
  * Get all recurring expenses for a budget
@@ -33,6 +33,40 @@ export async function getRecurringExpenses(
         ? parseFloat(expense.amount)
         : expense.amount,
   }));
+}
+
+/**
+ * Create a new recurring expense
+ * @param budgetId - The budget ID
+ * @param body - The recurring expense data
+ * @returns The created expense ID
+ */
+export async function createRecurringExpense(
+  budgetId: string,
+  body: CreateRecurringExpenseBody
+): Promise<{ id: number }> {
+  const response = await defaultServerInstance.post<{ id: number }>(
+    endpoints.recurringExpenses.create(budgetId),
+    body
+  );
+  return response.data;
+}
+
+/**
+ * Update an existing recurring expense
+ * @param budgetId - The budget ID
+ * @param recurringId - The recurring expense ID
+ * @param body - The updated recurring expense data
+ */
+export async function updateRecurringExpense(
+  budgetId: string,
+  recurringId: string,
+  body: CreateRecurringExpenseBody
+): Promise<void> {
+  await defaultServerInstance.put(
+    endpoints.recurringExpenses.byId(budgetId, recurringId),
+    body
+  );
 }
 
 /**

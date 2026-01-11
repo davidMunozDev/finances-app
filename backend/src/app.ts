@@ -13,6 +13,7 @@ import transactionsRoutes from "./routes/transactions.routes";
 import expensesRoutes from "./routes/expenses.routes";
 import categoriesRoutes from "./routes/categories.routes";
 import incomesRoutes from "./routes/incomes.routes";
+import assistantRoutes from "./routes/assistant.routes";
 
 import { errorMiddleware } from "./middleware/error.middleware";
 import { validateBody } from "./middleware/validate-body.middleware";
@@ -45,6 +46,7 @@ app.use("/", transactionsRoutes);
 app.use("/", expensesRoutes);
 app.use("/", categoriesRoutes);
 app.use("/", incomesRoutes);
+app.use("/assistant", assistantRoutes);
 
 app.use(cookieParser());
 app.use(errorMiddleware);

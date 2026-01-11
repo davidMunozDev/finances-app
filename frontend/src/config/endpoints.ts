@@ -43,4 +43,7 @@ export const endpoints = {
     addManual: (budgetId: string) => `/budgets/${budgetId}/transactions`,
     currentSummary: (budgetId: string) => `/budgets/${budgetId}/summary`,
   },
+  assistant: {
+    query: "/assistant/query",
+  },
 };

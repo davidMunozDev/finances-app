@@ -9,6 +9,7 @@ interface ProvisionsListProps {
   editingProvisionId: number | null;
   editName: string;
   editAmount: string;
+  isNewProvision: boolean;
   onNameChange: (name: string) => void;
   onAmountChange: (amount: string) => void;
   onEditProvision: (provision: ProvisionItem) => void;
@@ -23,6 +24,7 @@ export default function ProvisionsList({
   editingProvisionId,
   editName,
   editAmount,
+  isNewProvision,
   onNameChange,
   onAmountChange,
   onEditProvision,
@@ -55,25 +57,41 @@ export default function ProvisionsList({
             )}
           </Box>
         ))}
+
+        {/* Show new provision form if adding a new provision */}
+        {isNewProvision && editingProvisionId && (
+          <Box>
+            <EditProvisionForm
+              editName={editName}
+              editAmount={editAmount}
+              onNameChange={onNameChange}
+              onAmountChange={onAmountChange}
+              onSave={onSaveProvision}
+              onCancel={onCancelProvision}
+            />
+          </Box>
+        )}
       </Box>
 
-      {/* Add Provision Button */}
-      <Button
-        variant="outlined"
-        size="small"
-        startIcon={<AddCircleOutline />}
-        onClick={onAddProvision}
-        fullWidth
-        sx={{
-          mt: 1.5,
-          py: 1,
-          borderRadius: 1.5,
-          borderStyle: "dashed",
-          "&:hover": { borderStyle: "dashed" },
-        }}
-      >
-        Añadir provisión
-      </Button>
+      {/* Add Provision Button - hide when adding new provision */}
+      {!isNewProvision && (
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<AddCircleOutline />}
+          onClick={onAddProvision}
+          fullWidth
+          sx={{
+            mt: 1.5,
+            py: 1,
+            borderRadius: 1.5,
+            borderStyle: "dashed",
+            "&:hover": { borderStyle: "dashed" },
+          }}
+        >
+          Añadir provisión
+        </Button>
+      )}
     </Box>
   );
 }

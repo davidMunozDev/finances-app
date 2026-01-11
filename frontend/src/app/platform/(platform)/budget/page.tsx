@@ -65,7 +65,6 @@ export default function BudgetPage() {
   return (
     <Box
       sx={{
-        px: { xs: 2.5, sm: 3, md: 4, lg: 5 },
         py: { xs: 2.5, sm: 3, md: 4 },
         pb: { xs: 12, md: 4 },
       }}

@@ -34,7 +34,9 @@ export default function EditableCategorySection({
   );
   const [editName, setEditName] = useState("");
   const [editAmount, setEditAmount] = useState("");
-  const [isNewProvision, setIsNewProvision] = useState(false);
+  const [newProvisionCategoryId, setNewProvisionCategoryId] = useState<
+    number | null
+  >(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<
@@ -175,7 +177,11 @@ export default function EditableCategorySection({
     setEditingProvisionId(provision.id);
     setEditName(provision.name);
     setEditAmount(provision.amount.toString());
-    setIsNewProvision(isNew);
+    if (isNew) {
+      setNewProvisionCategoryId(categoryId);
+    } else {
+      setNewProvisionCategoryId(null);
+    }
   };
 
   const handleSaveProvision = async (categoryId: number) => {
@@ -187,6 +193,8 @@ export default function EditableCategorySection({
     if (isNaN(amount) || amount <= 0) {
       return;
     }
+
+    const isNewProvision = newProvisionCategoryId === categoryId;
 
     try {
       if (isNewProvision) {
@@ -215,7 +223,7 @@ export default function EditableCategorySection({
       setEditingProvisionId(null);
       setEditName("");
       setEditAmount("");
-      setIsNewProvision(false);
+      setNewProvisionCategoryId(null);
     } catch (error) {
       console.error("Error saving provision:", error);
       // Optionally show error to user
@@ -226,7 +234,7 @@ export default function EditableCategorySection({
     setEditingProvisionId(null);
     setEditName("");
     setEditAmount("");
-    setIsNewProvision(false);
+    setNewProvisionCategoryId(null);
   };
 
   const handleDeleteProvision = async (
@@ -311,6 +319,7 @@ export default function EditableCategorySection({
               editingProvisionId={editingProvisionId}
               editName={editName}
               editAmount={editAmount}
+              isNewProvision={newProvisionCategoryId === category.id}
               onNameChange={setEditName}
               onAmountChange={setEditAmount}
               onEditProvision={(provision) =>
