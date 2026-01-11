@@ -10,13 +10,9 @@ export interface TabItem {
 
 interface NavigationTabsProps {
   tabs: TabItem[];
-  basePath?: string;
 }
 
-export default function NavigationTabs({
-  tabs,
-  basePath,
-}: NavigationTabsProps) {
+export default function NavigationTabs({ tabs }: NavigationTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
 

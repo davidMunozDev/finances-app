@@ -71,7 +71,7 @@ export default function PeriodDynamicField({
               label="Fecha de inicio"
               type="date"
               error={!!errors.yearlyDate}
-              helperText={errors.yearlyDate?.message}
+              helperText={errors.yearlyDate?.message as string}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">

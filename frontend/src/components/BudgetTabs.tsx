@@ -12,5 +12,5 @@ export default function BudgetTabs({
     { label: "Progreso", path: `${basePath}/progress` },
   ];
 
-  return <NavigationTabs tabs={tabs} basePath={basePath} />;
+  return <NavigationTabs tabs={tabs} />;
 }
