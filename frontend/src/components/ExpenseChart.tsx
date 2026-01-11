@@ -172,25 +172,42 @@ export default function ExpenseChart({
             onChange={handlePeriodChange}
             size="small"
             sx={{
+              bgcolor: "primary.main",
+              borderRadius: 1.5,
+              "& .MuiToggleButtonGroup-grouped": {
+                border: 0,
+                "&:not(:first-of-type)": {
+                  borderRadius: 1.5,
+                  marginLeft: 0,
+                },
+                "&:first-of-type": {
+                  borderRadius: 1.5,
+                },
+              },
               "& .MuiToggleButton-root": {
                 px: 2,
                 py: 0.5,
-                textTransform: "none",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                borderRadius: 1,
+                textTransform: "uppercase",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "white",
+                border: "none",
+                minWidth: 36,
                 "&.Mui-selected": {
-                  bgcolor: "primary.main",
-                  color: "white",
+                  bgcolor: "white",
+                  color: "primary.main",
                   "&:hover": {
-                    bgcolor: "primary.dark",
+                    bgcolor: "white",
                   },
+                },
+                "&:hover": {
+                  bgcolor: "primary.dark",
                 },
               },
             }}
           >
-            <ToggleButton value="weekly">Weekly</ToggleButton>
-            <ToggleButton value="monthly">Monthly</ToggleButton>
+            <ToggleButton value="weekly">S</ToggleButton>
+            <ToggleButton value="monthly">M</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
