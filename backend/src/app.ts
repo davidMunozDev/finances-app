@@ -33,11 +33,6 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`🚀 Backend escuchando en http://localhost:${PORT}`);
-});
-
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/auth", authRoutes);
 app.use("/budgets", budgetsRoutes);
@@ -51,3 +46,14 @@ app.use("/assistant", assistantRoutes);
 
 app.use(cookieParser());
 app.use(errorMiddleware);
+
+// Para desarrollo local
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 4000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Backend escuchando en http://localhost:${PORT}`);
+  });
+}
+
+// Exportar para Vercel
+export default app;
