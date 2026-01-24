@@ -19,13 +19,17 @@ import crypto from "crypto";
 
 function signAccessToken(userId: number) {
   const expiresIn = process.env.ACCESS_TOKEN_EXPIRES_IN || "1h";
-  return jwt.sign({ sub: userId }, process.env.JWT_ACCESS_SECRET!, { expiresIn } as SignOptions);
+  return jwt.sign({ sub: userId }, process.env.JWT_ACCESS_SECRET!, {
+    expiresIn,
+  } as SignOptions);
 }
 
 function signRefreshToken(userId: number) {
   const days = Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS || 7);
   const expiresIn = `${days}d`;
-  return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, { expiresIn } as SignOptions);
+  return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, {
+    expiresIn,
+  } as SignOptions);
 }
 
 function hashToken(token: string) {
