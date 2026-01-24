@@ -25,3 +25,15 @@ export interface ChatMessage {
   data?: unknown;
   timestamp: Date;
 }
+
+export interface ScanReceiptRequest {
+  text: string;
+  budgetId: number;
+}
+
+export interface ScanReceiptResponse {
+  merchant?: string | null;
+  amount?: number | null;
+  category?: string | null;
+  detail?: string | null;
+}

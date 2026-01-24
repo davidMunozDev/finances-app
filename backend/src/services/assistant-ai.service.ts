@@ -7,6 +7,7 @@ import {
   ComplexAnalysisArgs,
   ComplexAnalysisResult,
   AnalysisPeriod,
+  ScanReceiptResponse,
 } from "../types/assistant.types";
 import {
   listDatasets,
@@ -632,4 +633,91 @@ export function formatDate(dateStr: string): string {
     month: "long",
     day: "numeric",
   }).format(date);
+}
+
+// ============================================
+// RECEIPT PROCESSING
+// ============================================
+
+export async function processReceiptText(
+  text: string,
+  categories: Array<{ id: number; name: string }>
+): Promise<ScanReceiptResponse> {
+  const categoryNames = categories.map((c) => c.name).join(", ");
+
+  const prompt = `Eres un asistente experto en procesar tickets y recibos en español.
+
+Analiza el siguiente texto extraído de un recibo mediante OCR y extrae la siguiente información:
+
+1. **merchant**: Nombre del comercio/establecimiento (ej: "Mercadona", "Carrefour", "El Corte Inglés")
+2. **amount**: Importe total en euros. Acepta tanto formato "12,50" como "12.50". Busca palabras clave como "TOTAL", "Importe", "A PAGAR", "EFECTIVO"
+3. **category**: Categoría más apropiada del gasto según estas opciones disponibles: [${categoryNames}]. Si no estás seguro, usa "Otros"
+4. **detail**: Un resumen detallado que incluya:
+   - Comercio
+   - Desglose de productos/servicios con cantidades y precios (si están disponibles)
+
+Formato de respuesta JSON:
+{
+  "merchant": "nombre del comercio o null",
+  "amount": número o null,
+  "category": "nombre de categoría o null",
+  "detail": "texto descriptivo o null"
+}
+
+IMPORTANTE:
+- Solo devuelve campos si tienes confianza razonable en la extracción
+- Si no encuentras un campo, devuelve null
+- Para amount, convierte comas a puntos decimales
+- Para category, elige solo de las categorías proporcionadas
+- Para detail, crea un texto legible con el comercio y los productos principales
+
+TEXTO DEL RECIBO:
+${text}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Eres un asistente que procesa recibos españoles y devuelve JSON válido.",
+        },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+    });
+
+    const responseText = completion.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(responseText);
+
+    // Validate and normalize the response
+    const result: ScanReceiptResponse = {
+      merchant: parsed.merchant || null,
+      amount:
+        parsed.amount && !isNaN(parseFloat(parsed.amount))
+          ? parseFloat(parsed.amount)
+          : null,
+      category:
+        parsed.category &&
+        categories.some(
+          (c) => c.name.toLowerCase() === parsed.category.toLowerCase()
+        )
+          ? parsed.category
+          : null,
+      detail: parsed.detail || null,
+    };
+
+    return result;
+  } catch (error) {
+    console.error("Error processing receipt text:", error);
+    // Return empty response on error
+    return {
+      merchant: null,
+      amount: null,
+      category: null,
+      detail: null,
+    };
+  }
 }

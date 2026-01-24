@@ -1,6 +1,25 @@
 import { defaultServerInstance } from "@/config/servers";
 import { endpoints } from "@/config/endpoints";
 import type { Budget, CreateBudgetBody, UpdateBudgetBody } from "./types";
+import type { Transaction } from "@/dashboard/types";
+
+/**
+ * Get all expenses for a budget (current cycle by default)
+ */
+export async function getExpenses(budgetId: string): Promise<Transaction[]> {
+  const response = await defaultServerInstance.get<any[]>(
+    endpoints.expenses.getAll(budgetId)
+  );
+
+  // Transform response: convert amount from string to number if needed
+  return response.data.map((expense) => ({
+    ...expense,
+    amount:
+      typeof expense.amount === "string"
+        ? parseFloat(expense.amount)
+        : expense.amount,
+  }));
+}
 
 /**
  * Create a new budget

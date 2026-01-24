@@ -29,6 +29,22 @@ export interface ResponseMetadata {
 }
 
 // ============================================
+// RECEIPT SCANNING TYPES
+// ============================================
+
+export interface ScanReceiptRequest {
+  text: string;
+  budgetId: number;
+}
+
+export interface ScanReceiptResponse {
+  merchant?: string | null;
+  amount?: number | null;
+  category?: string | null;
+  detail?: string | null;
+}
+
+// ============================================
 // DATASET TYPES
 // ============================================
 

@@ -5,6 +5,7 @@ import { defaultServerInstance } from "@/config/servers";
 import { endpoints } from "@/config/endpoints";
 import {
   setAccessToken,
+  setUserData,
   removeAccessToken,
   removeUserData,
 } from "@/auth/utils";
@@ -21,7 +22,10 @@ export async function registerUser(data: RegisterBody): Promise<AuthResponse> {
 
   // Guardar el access token y user data automáticamente
   setAccessToken(response.data.access_token);
-  mutate(endpoints.auth.me);
+  setUserData(response.data.user);
+
+  // Actualizar cache de SWR con los datos del usuario
+  await mutate(endpoints.auth.me, response.data.user, false);
 
   return response.data;
 }
@@ -37,7 +41,10 @@ export async function loginUser(data: LoginBody): Promise<AuthResponse> {
 
   // Guardar el access token y user data automáticamente
   setAccessToken(response.data.access_token);
-  mutate(endpoints.auth.me);
+  setUserData(response.data.user);
+
+  // Actualizar cache de SWR con los datos del usuario
+  await mutate(endpoints.auth.me, response.data.user, false);
 
   return response.data;
 }

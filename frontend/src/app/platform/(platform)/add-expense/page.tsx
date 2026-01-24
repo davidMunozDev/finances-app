@@ -1,10 +1,20 @@
 "use client";
 
-import { Box, Button, Typography, InputAdornment, Switch } from "@mui/material";
+import {
+  Box,
+  Button,
+  Typography,
+  InputAdornment,
+  Switch,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+} from "@mui/material";
 import {
   EuroSymbol,
   CameraAlt,
   AccountBalanceWallet,
+  ExpandMore,
 } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,6 +31,8 @@ import { useBudget } from "@/budget/BudgetProvider";
 import { createExpense } from "@/data/expenses/api";
 import { useProvisions } from "@/data/provisions";
 import { paths } from "@/config/paths";
+import ReceiptScanModal from "@/add-expense/components/ReceiptScanModal";
+import { ScanReceiptResponse } from "@/data/assistant/types";
 
 // Validation schema with conditional logic
 const expenseSchema = z
@@ -32,6 +44,7 @@ const expenseSchema = z
     category: z.string().min(1, "La categoría es requerida"),
     provisionId: z.string().optional(),
     name: z.string().min(1, "El nombre del gasto es requerido"),
+    detail: z.string().optional(),
     isOneTime: z.boolean(),
     period: z.enum(["weekly", "monthly", "yearly"]).optional(),
     dayOfWeek: z.string().optional(),
@@ -112,6 +125,7 @@ export default function AddExpensePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedBudgetId, setSelectedBudgetId] = useState<string>("");
+  const [scanModalOpen, setScanModalOpen] = useState(false);
   const {
     provisions,
     isLoading: provisionsLoading,
@@ -139,6 +153,7 @@ export default function AddExpensePage() {
       provisionId: "",
       isOneTime: true,
       name: "",
+      detail: "",
       period: "monthly",
       dayOfWeek: "1", // Lunes por defecto
       dayOfMonth: "1", // Día 1 por defecto
@@ -159,6 +174,33 @@ export default function AddExpensePage() {
   const provisionId = watch("provisionId");
   const isOneTime = watch("isOneTime");
   const period = watch("period");
+  const detail = watch("detail");
+
+  // Get existing category names for autocomplete - only categories with provisions + 'Otros'
+  const categoriesWithProvisions = categories.filter(
+    (cat) =>
+      cat.name === "Otros" ||
+      provisions.some((provision) => provision.category_id === cat.id)
+  );
+  const existingCategories = categoriesWithProvisions.map((cat) => cat.name);
+
+  // Handle scan complete
+  const handleScanComplete = (data: ScanReceiptResponse) => {
+    if (data.amount) {
+      setValue("amount", data.amount);
+    }
+    // Only set category if it exists in the available categories
+    if (data.category && existingCategories.includes(data.category)) {
+      setValue("category", data.category);
+    }
+    if (data.merchant) {
+      setValue("name", data.merchant);
+    }
+    if (data.detail) {
+      setValue("detail", data.detail);
+    }
+    setScanModalOpen(false);
+  };
 
   // Update selectedBudgetId when budgetId changes
   useEffect(() => {
@@ -283,14 +325,6 @@ export default function AddExpensePage() {
     }
   };
 
-  // Get existing category names for autocomplete - only categories with provisions + 'Otros'
-  const categoriesWithProvisions = categories.filter(
-    (cat) =>
-      cat.name === "Otros" ||
-      provisions.some((provision) => provision.category_id === cat.id)
-  );
-  const existingCategories = categoriesWithProvisions.map((cat) => cat.name);
-
   return (
     <Box
       sx={{
@@ -353,12 +387,13 @@ export default function AddExpensePage() {
           )}
         />
 
-        {/* Photo Button (UI only) */}
+        {/* Photo Button */}
         <Box>
           <Button
             variant="outlined"
             startIcon={<CameraAlt />}
             fullWidth
+            onClick={() => setScanModalOpen(true)}
             sx={{
               textTransform: "none",
               fontSize: "1rem",
@@ -454,6 +489,43 @@ export default function AddExpensePage() {
           )}
         />
 
+        {/* Detail Field (Accordion) */}
+        {detail && (
+          <Accordion
+            sx={{
+              bgcolor: "background.paper",
+              borderRadius: 2,
+              "&:before": { display: "none" },
+              boxShadow: "none",
+              border: 1,
+              borderColor: "divider",
+            }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              sx={{
+                "&:hover": { bgcolor: "action.hover" },
+              }}
+            >
+              <Typography sx={{ fontSize: "0.875rem", fontWeight: "medium" }}>
+                Detalle del Recibo
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography
+                variant="body2"
+                sx={{
+                  whiteSpace: "pre-wrap",
+                  color: "text.secondary",
+                  fontFamily: "system-ui",
+                }}
+              >
+                {detail}
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+        )}
+
         <Box
           sx={{
             display: "flex",
@@ -533,6 +605,14 @@ export default function AddExpensePage() {
           {isSubmitting ? "Añadiendo..." : "Añadir Gasto"}
         </Button>
       </Box>
+
+      {/* Receipt Scan Modal */}
+      <ReceiptScanModal
+        open={scanModalOpen}
+        onClose={() => setScanModalOpen(false)}
+        budgetId={budgetId}
+        onScanComplete={handleScanComplete}
+      />
     </Box>
   );
 }

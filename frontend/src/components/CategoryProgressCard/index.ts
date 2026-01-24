@@ -1,0 +1,1 @@
+export { CategoryProgressCard } from "./CategoryProgressCard";

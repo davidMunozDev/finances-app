@@ -17,4 +17,7 @@ router.post(
   asyncHandler(assistantController.invalidateCacheEndpoint)
 );
 
+// POST /assistant/scan-receipt - Process receipt text with AI
+router.post("/scan-receipt", asyncHandler(assistantController.scanReceipt));
+
 export default router;

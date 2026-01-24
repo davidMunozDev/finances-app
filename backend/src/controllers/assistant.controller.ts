@@ -6,9 +6,13 @@ import { ERROR_CODES } from "../constants/error-codes";
 import { HTTP_STATUS } from "../constants/http-status";
 import { getBudgetById, listBudgets } from "../services/budgets.service";
 import { syncBudgetCycle } from "../services/budget-cycles.service";
-import { processQuery } from "../services/assistant-ai.service";
-import { AssistantContext } from "../types/assistant.types";
+import {
+  processQuery,
+  processReceiptText,
+} from "../services/assistant-ai.service";
+import { AssistantContext, ScanReceiptRequest } from "../types/assistant.types";
 import { invalidateCache } from "../services/assistant-datasets.service";
+import { listCategories } from "../services/categories.service";
 
 /**
  * POST /assistant/query
@@ -85,4 +89,49 @@ export async function invalidateCacheEndpoint(req: AuthRequest, res: Response) {
   invalidateCache(userId, dataset);
 
   return res.status(HTTP_STATUS.NO_CONTENT).send();
+}
+
+/**
+ * POST /assistant/scan-receipt
+ * Process receipt text with AI to extract expense data
+ */
+export async function scanReceipt(req: AuthRequest, res: Response) {
+  const userId = req.user!.id;
+
+  // Validate request body
+  const { text, budgetId } = req.body as ScanReceiptRequest;
+
+  if (!text || typeof text !== "string") {
+    throw new AppError({
+      status: HTTP_STATUS.BAD_REQUEST,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "El campo 'text' es requerido y debe ser un string",
+    });
+  }
+
+  if (!budgetId || typeof budgetId !== "number") {
+    throw new AppError({
+      status: HTTP_STATUS.BAD_REQUEST,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "El campo 'budgetId' es requerido y debe ser un número",
+    });
+  }
+
+  // Validate budget ownership
+  const budget = await getBudgetById(userId, budgetId);
+  if (!budget) {
+    throw new AppError({
+      status: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.NOT_FOUND,
+      message: "Presupuesto no encontrado",
+    });
+  }
+
+  // Get user's categories (categories are user-specific, not budget-specific)
+  const categories = await listCategories(userId);
+
+  // Process receipt text with AI
+  const result = await processReceiptText(text, categories);
+
+  return res.json(result);
 }
