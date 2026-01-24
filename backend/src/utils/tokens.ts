@@ -1,17 +1,15 @@
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import crypto from "crypto";
 
 export function signAccessToken(payload: object) {
-  return jwt.sign(payload, process.env.JWT_ACCESS_SECRET!, {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "1h",
-  });
+  const expiresIn = process.env.ACCESS_TOKEN_EXPIRES_IN || "1h";
+  return jwt.sign(payload, process.env.JWT_ACCESS_SECRET!, { expiresIn } as SignOptions);
 }
 
 export function signRefreshToken(payload: object) {
   const days = Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS || 7);
-  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, {
-    expiresIn: `${days}d`,
-  });
+  const expiresIn = `${days}d`;
+  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, { expiresIn } as SignOptions);
 }
 
 export function hashToken(token: string) {

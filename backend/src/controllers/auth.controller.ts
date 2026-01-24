@@ -8,7 +8,7 @@ import type {
 import type { UserRow } from "../types/user.types";
 import type { DBRow, DBResult } from "../types/db.types";
 
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import { pool } from "../db";
 import { hashPassword, comparePassword } from "../utils/password";
 import { AppError } from "../errors/app-error";
@@ -18,16 +18,14 @@ import { syncBudgetCycle } from "../services/budget-cycles.service";
 import crypto from "crypto";
 
 function signAccessToken(userId: number) {
-  return jwt.sign({ sub: userId }, process.env.JWT_ACCESS_SECRET!, {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "1h",
-  });
+  const expiresIn = process.env.ACCESS_TOKEN_EXPIRES_IN || "1h";
+  return jwt.sign({ sub: userId }, process.env.JWT_ACCESS_SECRET!, { expiresIn } as SignOptions);
 }
 
 function signRefreshToken(userId: number) {
   const days = Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS || 7);
-  return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, {
-    expiresIn: `${days}d`,
-  });
+  const expiresIn = `${days}d`;
+  return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, { expiresIn } as SignOptions);
 }
 
 function hashToken(token: string) {
