@@ -1,5 +1,5 @@
 {
-  "name": "finances-app",
+  "name": "fin-smart",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -16,9 +16,11 @@
     "@mui/material": "^7.3.5",
     "@mui/x-charts": "^8.20.0",
     "@mui/x-date-pickers": "^8.20.0",
+    "@types/papaparse": "^5.5.2",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
     "next": "^16.1.1",
+    "papaparse": "^5.5.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hook-form": "^7.68.0",

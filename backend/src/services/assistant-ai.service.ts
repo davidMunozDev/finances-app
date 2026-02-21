@@ -8,6 +8,8 @@ import {
   ComplexAnalysisResult,
   AnalysisPeriod,
   ScanReceiptResponse,
+  ExtractedTransaction,
+  ProcessFileResponse,
 } from "../types/assistant.types";
 import {
   listDatasets,
@@ -750,5 +752,116 @@ ${text}`;
       category: null,
       detail: null,
     };
+  }
+}
+
+// ============================================
+// FILE IMPORT PROCESSING (CSV / PDF)
+// ============================================
+
+export async function processFileContent(
+  content: string,
+  format: "csv" | "pdf",
+  categories: Array<{ id: number; name: string }>,
+): Promise<ProcessFileResponse> {
+  const categoryNames = categories.map((c) => c.name).join(", ");
+
+  const formatInstructions =
+    format === "csv"
+      ? `El contenido es un archivo CSV (valores separados por comas, punto y coma, o tabulaciones) de un extracto bancario o de tarjeta.
+Analiza las cabeceras y filas para determinar qué columna es la fecha, cuál es el concepto/descripción y cuál es el importe.
+Los importes negativos o con signo "-" suelen ser gastos; los positivos suelen ser ingresos.
+Si hay una columna de "tipo" o "movimiento" que indica cargo/abono, úsala para determinar si es gasto o ingreso.`
+      : `El contenido es texto extraído de un archivo PDF de un extracto bancario o de tarjeta.
+Analiza la estructura del documento para identificar las transacciones individuales.
+Busca patrones de fecha, concepto/descripción e importe en cada línea o bloque.`;
+
+  const prompt = `Eres un experto en interpretar extractos bancarios y de tarjetas de crédito en español.
+
+${formatInstructions}
+
+INSTRUCCIONES:
+1. Identifica TODAS las transacciones individuales del documento.
+2. Para cada transacción, extrae:
+   - **type**: "expense" si es un cargo/gasto/pago, "income" si es un ingreso/abono/nómina/transferencia recibida
+   - **amount**: El importe absoluto (siempre positivo, sin signo)
+   - **description**: El concepto, descripción o nombre del comercio
+   - **date**: La fecha en formato YYYY-MM-DD. Si el año no aparece, usa el año actual (${new Date().getFullYear()})
+   - **category**: La categoría más apropiada de esta lista: [${categoryNames}]. Si no encaja claramente en ninguna, usa null
+
+REGLAS:
+- Ignora líneas de saldo, totales, comisiones bancarias genéricas, cabeceras y pies de página
+- Si el importe tiene formato europeo (1.234,56), conviértelo a número decimal (1234.56)
+- Si no puedes determinar si es gasto o ingreso, clasifícalo como "expense"
+- Ordena las transacciones por fecha (más reciente primero)
+- Para category, elige SOLO de las categorías proporcionadas o null
+
+Formato de respuesta JSON:
+{
+  "transactions": [
+    {
+      "type": "expense" | "income",
+      "amount": number,
+      "description": "texto",
+      "date": "YYYY-MM-DD",
+      "category": "nombre de categoría" | null
+    }
+  ]
+}
+
+CONTENIDO DEL ARCHIVO:
+${content}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Eres un asistente especializado en interpretar extractos bancarios españoles y devolver JSON válido con las transacciones extraídas.",
+        },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+    });
+
+    const responseText = completion.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(responseText);
+
+    if (!parsed.transactions || !Array.isArray(parsed.transactions)) {
+      return { transactions: [] };
+    }
+
+    // Validate and normalize each transaction
+    const transactions: ExtractedTransaction[] = parsed.transactions
+      .filter(
+        (t: any) =>
+          t &&
+          typeof t.amount === "number" &&
+          t.amount > 0 &&
+          typeof t.date === "string" &&
+          /^\d{4}-\d{2}-\d{2}$/.test(t.date),
+      )
+      .map((t: any) => ({
+        type: t.type === "income" ? "income" : "expense",
+        amount: Math.round(t.amount * 100) / 100,
+        description:
+          typeof t.description === "string" ? t.description.trim() : "",
+        date: t.date,
+        category:
+          t.category &&
+          categories.some(
+            (c) => c.name.toLowerCase() === t.category.toLowerCase(),
+          )
+            ? t.category
+            : null,
+      }));
+
+    return { transactions };
+  } catch (error) {
+    console.error("Error processing file content:", error);
+    return { transactions: [] };
   }
 }

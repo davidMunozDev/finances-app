@@ -1,8 +1,8 @@
 "use client";
 
 import { Box, Button } from "@mui/material";
-import { useMemo } from "react";
-import { FilterList } from "@mui/icons-material";
+import { useMemo, useState } from "react";
+import { FilterList, UploadFile } from "@mui/icons-material";
 import { useBudget } from "@/budget";
 import { useExpenses } from "@/data/expenses/hooks";
 import { useCategories } from "@/data/categories/hooks";
@@ -10,20 +10,23 @@ import ExpenseChart from "@/components/ExpenseChart";
 import ExpenseTransactionsList from "@/components/ExpenseTransactionsList";
 import ExpenseFiltersModal from "@/components/ExpenseFiltersModal";
 import { useExpensesFilters } from "../useExpensesFilters";
+import { FileImportModal } from "@/components";
 
 export default function CompletedPage() {
   const { currentBudget } = useBudget();
   const { categories } = useCategories();
   const { filters, isModalOpen, openModal, closeModal, applyFilters } =
     useExpensesFilters();
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
-  const { expenses, isLoading: expensesLoading } = useExpenses(
-    currentBudget?.id,
-    {
-      startDate: filters.startDate,
-      endDate: filters.endDate,
-    }
-  );
+  const {
+    expenses,
+    isLoading: expensesLoading,
+    mutate: mutateExpenses,
+  } = useExpenses(currentBudget?.id, {
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+  });
 
   // Filter expenses by category (client-side filtering)
   const filteredExpenses = useMemo(() => {
@@ -31,7 +34,7 @@ export default function CompletedPage() {
       return expenses;
     }
     return expenses.filter(
-      (expense) => expense.category_id === filters.categoryId
+      (expense) => expense.category_id === filters.categoryId,
     );
   }, [expenses, filters.categoryId]);
 
@@ -53,6 +56,9 @@ export default function CompletedPage() {
           sx={{
             maxWidth: { xs: "100%", lg: 900 },
             mx: "auto",
+            display: "flex",
+            gap: 1,
+            flexWrap: "wrap",
           }}
         >
           <Button
@@ -75,6 +81,26 @@ export default function CompletedPage() {
             }}
           >
             Filtros{hasActiveFilters && " (activos)"}
+          </Button>
+          <Button
+            onClick={() => setImportModalOpen(true)}
+            variant="outlined"
+            startIcon={<UploadFile />}
+            sx={{
+              textTransform: "none",
+              borderRadius: 2,
+              px: 2.5,
+              py: 1,
+              fontWeight: 500,
+              borderColor: "divider",
+              color: "text.secondary",
+              "&:hover": {
+                borderColor: "primary.main",
+                bgcolor: "primary.50",
+              },
+            }}
+          >
+            Importar archivo
           </Button>
         </Box>
       </Box>
@@ -115,6 +141,18 @@ export default function CompletedPage() {
         categories={categories}
         initialFilters={filters}
       />
+
+      {currentBudget && (
+        <FileImportModal
+          open={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          budgetId={currentBudget.id.toString()}
+          categories={categories}
+          onImportComplete={() => {
+            mutateExpenses();
+          }}
+        />
+      )}
     </>
   );
 }

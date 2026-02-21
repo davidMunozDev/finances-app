@@ -1,6 +1,7 @@
 import { pool } from "../db";
 import type { DBRow, DBResult } from "../types/db.types";
 import type { ProvisionRow } from "../types/provision.types";
+import type { BulkImportItem } from "../types/assistant.types";
 import { AppError } from "../errors/app-error";
 import { ERROR_CODES } from "../constants/error-codes";
 
@@ -18,7 +19,7 @@ export async function createManualTransaction(params: {
   if (params.provisionId) {
     const provision = await pool.query<ProvisionRow>(
       `SELECT id, budget_id, category_id FROM budget_provisions WHERE id = $1`,
-      [params.provisionId]
+      [params.provisionId],
     );
 
     if (!provision.rows[0]) {
@@ -59,7 +60,7 @@ export async function createManualTransaction(params: {
       params.description ?? null,
       params.amount,
       params.dateISO,
-    ]
+    ],
   );
   return result.rows[0].id;
 }
@@ -77,7 +78,7 @@ export async function listCycleTransactions(params: {
      LEFT JOIN budget_provisions p ON t.provision_id = p.id
      WHERE t.user_id = $1 AND t.budget_id = $2 AND t.cycle_id = $3
      ORDER BY t.date DESC, t.id DESC`,
-    [params.userId, params.budgetId, params.cycleId]
+    [params.userId, params.budgetId, params.cycleId],
   );
   return result.rows;
 }
@@ -91,7 +92,7 @@ export async function getCycleTotals(params: {
     `SELECT COALESCE(SUM(amount), 0) AS total
      FROM transactions
      WHERE user_id = $1 AND budget_id = $2 AND cycle_id = $3 AND type = 'expense' AND source != 'fixed'`,
-    [params.userId, params.budgetId, params.cycleId]
+    [params.userId, params.budgetId, params.cycleId],
   );
   return Number(result.rows[0].total);
 }
@@ -105,7 +106,7 @@ export async function getCycleIncomes(params: {
     `SELECT COALESCE(SUM(amount), 0) AS total
      FROM transactions
      WHERE user_id = $1 AND budget_id = $2 AND cycle_id = $3 AND type = 'income'`,
-    [params.userId, params.budgetId, params.cycleId]
+    [params.userId, params.budgetId, params.cycleId],
   );
   return Number(result.rows[0].total);
 }
@@ -159,4 +160,45 @@ export async function listExpenses(params: {
 
   const result = await pool.query<any>(query, queryParams);
   return result.rows;
+}
+
+export async function createBulkTransactions(params: {
+  userId: number;
+  budgetId: number;
+  cycleId: number;
+  transactions: BulkImportItem[];
+}): Promise<{ created: number }> {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    let created = 0;
+
+    for (const tx of params.transactions) {
+      await client.query(
+        `INSERT INTO transactions (user_id, budget_id, cycle_id, category_id, type, description, amount, date, source)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'manual')`,
+        [
+          params.userId,
+          params.budgetId,
+          params.cycleId,
+          tx.type === "expense" ? (tx.category_id ?? null) : null,
+          tx.type,
+          tx.description ?? null,
+          tx.amount,
+          tx.date,
+        ],
+      );
+      created++;
+    }
+
+    await client.query("COMMIT");
+    return { created };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }

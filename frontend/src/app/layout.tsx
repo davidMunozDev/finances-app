@@ -14,26 +14,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Finances App",
+  title: "Fin Smart",
   description: "Personal finance management application",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Finances App",
+    title: "Fin Smart",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: "website",
-    siteName: "Finances App",
-    title: "Finances App",
+    siteName: "Fin Smart",
+    title: "Fin Smart",
     description: "Gestiona tus finanzas personales de forma sencilla",
   },
   twitter: {
     card: "summary",
-    title: "Finances App",
+    title: "Fin Smart",
     description: "Gestiona tus finanzas personales de forma sencilla",
   },
 };

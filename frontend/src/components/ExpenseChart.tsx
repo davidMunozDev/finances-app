@@ -29,7 +29,7 @@ export default function ExpenseChart({
 
   const handlePeriodChange = (
     _event: React.MouseEvent<HTMLElement>,
-    newPeriod: PeriodType | null
+    newPeriod: PeriodType | null,
   ) => {
     if (newPeriod !== null) {
       setPeriod(newPeriod);
@@ -57,7 +57,7 @@ export default function ExpenseChart({
       expenses.forEach((expense) => {
         const expenseDate = new Date(expense.date);
         const daysAgo = Math.floor(
-          (now.getTime() - expenseDate.getTime()) / (1000 * 60 * 60 * 24)
+          (now.getTime() - expenseDate.getTime()) / (1000 * 60 * 60 * 24),
         );
 
         if (daysAgo >= 0 && daysAgo < 30) {
@@ -79,7 +79,7 @@ export default function ExpenseChart({
       expenses.forEach((expense) => {
         const expenseDate = new Date(expense.date);
         const daysAgo = Math.floor(
-          (now.getTime() - expenseDate.getTime()) / (1000 * 60 * 60 * 24)
+          (now.getTime() - expenseDate.getTime()) / (1000 * 60 * 60 * 24),
         );
 
         if (daysAgo >= 0 && daysAgo < 7) {
@@ -223,7 +223,7 @@ export default function ExpenseChart({
         </Typography>
 
         {chartData.data.length > 0 ? (
-          <Box sx={{ width: "100%", ml: -6, mr: -3, px: 3 }}>
+          <Box sx={{ width: "100%", overflow: "hidden" }}>
             <LineChart
               xAxis={[
                 {
@@ -259,12 +259,12 @@ export default function ExpenseChart({
               height={180}
               margin={{ top: 0, bottom: 30, left: 0, right: 0 }}
               sx={{
-                width: "120%",
+                width: "100%",
                 "& .MuiLineElement-root": {
                   strokeWidth: 3,
                 },
                 "& .MuiAreaElement-root": {
-                  fill: "url(#gradient)",
+                  fill: "url(#expenseGradient)",
                   fillOpacity: 1,
                 },
                 "& .MuiChartsAxis-line": {
@@ -280,7 +280,13 @@ export default function ExpenseChart({
               }}
             >
               <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <linearGradient
+                  id="expenseGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="0%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#A78BFA" stopOpacity={0.8} />
                   <stop offset="100%" stopColor="#A78BFA" stopOpacity={0.1} />
                 </linearGradient>

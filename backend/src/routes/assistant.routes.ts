@@ -14,10 +14,13 @@ router.post("/query", asyncHandler(assistantController.query));
 // POST /assistant/invalidate-cache - Invalidate cache for user
 router.post(
   "/invalidate-cache",
-  asyncHandler(assistantController.invalidateCacheEndpoint)
+  asyncHandler(assistantController.invalidateCacheEndpoint),
 );
 
 // POST /assistant/scan-receipt - Process receipt text with AI
 router.post("/scan-receipt", asyncHandler(assistantController.scanReceipt));
+
+// POST /assistant/process-file - Process CSV/PDF file content with AI
+router.post("/process-file", asyncHandler(assistantController.processFile));
 
 export default router;

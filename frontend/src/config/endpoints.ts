@@ -42,8 +42,11 @@ export const endpoints = {
   transactions: {
     addManual: (budgetId: string) => `/budgets/${budgetId}/transactions`,
     currentSummary: (budgetId: string) => `/budgets/${budgetId}/summary`,
+    bulkImport: (budgetId: string) =>
+      `/budgets/${budgetId}/transactions/import`,
   },
   assistant: {
     query: "/assistant/query",
+    processFile: "/assistant/process-file",
   },
 };

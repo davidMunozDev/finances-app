@@ -9,10 +9,17 @@ import { syncBudgetCycle } from "../services/budget-cycles.service";
 import {
   processQuery,
   processReceiptText,
+  processFileContent,
 } from "../services/assistant-ai.service";
-import { AssistantContext, ScanReceiptRequest } from "../types/assistant.types";
+import {
+  AssistantContext,
+  ScanReceiptRequest,
+  ProcessFileRequest,
+} from "../types/assistant.types";
 import { invalidateCache } from "../services/assistant-datasets.service";
 import { listCategories } from "../services/categories.service";
+import { ProcessFileSchema } from "../validators/import.validator";
+import { PDFParse } from "pdf-parse";
 
 /**
  * POST /assistant/query
@@ -132,6 +139,73 @@ export async function scanReceipt(req: AuthRequest, res: Response) {
 
   // Process receipt text with AI
   const result = await processReceiptText(text, categories);
+
+  return res.json(result);
+}
+
+/**
+ * POST /assistant/process-file
+ * Process CSV/PDF file content with AI to extract transactions
+ */
+export async function processFile(req: AuthRequest, res: Response) {
+  const userId = req.user!.id;
+
+  // Validate request body
+  const parsed = ProcessFileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError({
+      status: HTTP_STATUS.BAD_REQUEST,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "Body inválido",
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { content, format, budgetId } = parsed.data;
+
+  // Validate budget ownership
+  const budget = await getBudgetById(userId, budgetId);
+  if (!budget) {
+    throw new AppError({
+      status: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.NOT_FOUND,
+      message: "Presupuesto no encontrado",
+    });
+  }
+
+  // Get user's categories
+  const categories = await listCategories(userId);
+
+  // For PDF: decode base64 and extract text server-side
+  let textContent = content;
+  if (format === "pdf") {
+    try {
+      const pdfBuffer = Buffer.from(content, "base64");
+      const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
+      const textResult = await parser.getText();
+      textContent = textResult.text;
+      await parser.destroy();
+    } catch {
+      throw new AppError({
+        status: HTTP_STATUS.BAD_REQUEST,
+        code: ERROR_CODES.VALIDATION_ERROR,
+        message:
+          "No se pudo leer el archivo PDF. Verifica que no esté dañado o protegido.",
+      });
+    }
+
+    if (!textContent || textContent.trim().length < 10) {
+      throw new AppError({
+        status: HTTP_STATUS.BAD_REQUEST,
+        code: ERROR_CODES.VALIDATION_ERROR,
+        message:
+          "No se pudo extraer texto del PDF. Verifica que contenga texto y no solo imágenes.",
+      });
+    }
+  }
+
+  // Process file content with AI
+  const result = await processFileContent(textContent, format, categories);
 
   return res.json(result);
 }

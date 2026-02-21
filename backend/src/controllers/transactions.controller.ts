@@ -9,8 +9,10 @@ import {
   listCycleTransactions,
   getCycleTotals,
   getCycleIncomes,
+  createBulkTransactions,
 } from "../services/transactions.service";
 import { getProvisionsTotal } from "../services/provisions.service";
+import { BulkImportSchema } from "../validators/import.validator";
 
 function parseId(v: string) {
   const n = Number(v);
@@ -124,4 +126,48 @@ export async function currentSummary(req: AuthRequest, res: Response) {
     totalProvisions,
     transactions: tx,
   });
+}
+
+export async function bulkImport(req: AuthRequest, res: Response) {
+  const budgetId = parseId(req.params.budgetId);
+  if (!budgetId)
+    throw new AppError({
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "budgetId inválido",
+    });
+
+  const budget = await getBudgetById(req.user!.id, budgetId);
+  if (!budget)
+    throw new AppError({
+      status: 404,
+      code: ERROR_CODES.NOT_FOUND,
+      message: "Presupuesto no encontrado",
+    });
+
+  const parsed = BulkImportSchema.safeParse(req.body);
+  if (!parsed.success)
+    throw new AppError({
+      status: 400,
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "Body inválido",
+      details: parsed.error.flatten(),
+    });
+
+  const cycle = await syncBudgetCycle({ userId: req.user!.id, budgetId });
+  if (!cycle)
+    throw new AppError({
+      status: 404,
+      code: ERROR_CODES.NOT_FOUND,
+      message: "No se pudo resolver el ciclo actual",
+    });
+
+  const result = await createBulkTransactions({
+    userId: req.user!.id,
+    budgetId,
+    cycleId: cycle.id,
+    transactions: parsed.data.transactions,
+  });
+
+  return res.status(201).json(result);
 }

@@ -1,6 +1,6 @@
 {
-  "name": "Finances App",
-  "short_name": "Finances",
+  "name": "Fin Smart",
+  "short_name": "Fin Smart",
   "description": "Gestiona tus finanzas personales de forma sencilla",
   "start_url": "/",
   "display": "standalone",

@@ -45,6 +45,40 @@ export interface ScanReceiptResponse {
 }
 
 // ============================================
+// FILE IMPORT TYPES
+// ============================================
+
+export interface ProcessFileRequest {
+  content: string;
+  format: "csv" | "pdf";
+  budgetId: number;
+}
+
+export interface ExtractedTransaction {
+  type: "income" | "expense";
+  amount: number;
+  description: string;
+  date: string; // YYYY-MM-DD
+  category: string | null;
+}
+
+export interface ProcessFileResponse {
+  transactions: ExtractedTransaction[];
+}
+
+export interface BulkImportRequest {
+  transactions: BulkImportItem[];
+}
+
+export interface BulkImportItem {
+  type: "income" | "expense";
+  amount: number;
+  description?: string;
+  date: string; // YYYY-MM-DD
+  category_id?: number | null;
+}
+
+// ============================================
 // DATASET TYPES
 // ============================================
 
@@ -225,6 +259,6 @@ export interface DatasetDefinition {
   };
   queryBuilder: (
     context: AssistantContext,
-    args: QueryDatasetArgs | AggregateDatasetArgs
+    args: QueryDatasetArgs | AggregateDatasetArgs,
   ) => Promise<unknown>;
 }

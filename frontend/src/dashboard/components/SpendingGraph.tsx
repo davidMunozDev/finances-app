@@ -93,7 +93,7 @@ export function SpendingGraph({
         </Box>
 
         {data.length > 0 ? (
-          <Box sx={{ width: "100%", ml: -6, mr: -3, px: 3 }}>
+          <Box sx={{ width: "100%", overflow: "hidden" }}>
             <LineChart
               xAxis={[
                 {
@@ -129,12 +129,12 @@ export function SpendingGraph({
               height={180}
               margin={{ top: 0, bottom: 30, left: 0, right: 0 }}
               sx={{
-                width: "120%",
+                width: "100%",
                 "& .MuiLineElement-root": {
                   strokeWidth: 3,
                 },
                 "& .MuiAreaElement-root": {
-                  fill: "url(#gradient)",
+                  fill: "url(#spendingGradient)",
                   fillOpacity: 1,
                 },
                 "& .MuiChartsAxis-line": {
@@ -150,7 +150,13 @@ export function SpendingGraph({
               }}
             >
               <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <linearGradient
+                  id="spendingGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="0%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#A78BFA" stopOpacity={0.8} />
                   <stop offset="100%" stopColor="#A78BFA" stopOpacity={0.1} />
                 </linearGradient>

@@ -28,3 +28,4 @@ export type {
   CategoryWithProvisions,
   ProvisionItem,
 } from "./EditableCategorySection/types";
+export { default as FileImportModal } from "./FileImportModal";

@@ -7,6 +7,10 @@ const router = Router();
 router.use(authMiddleware);
 
 router.post("/budgets/:budgetId/transactions", asyncHandler(t.addManual));
+router.post(
+  "/budgets/:budgetId/transactions/import",
+  asyncHandler(t.bulkImport),
+);
 router.get("/budgets/:budgetId/summary", asyncHandler(t.currentSummary));
 
 export default router;
