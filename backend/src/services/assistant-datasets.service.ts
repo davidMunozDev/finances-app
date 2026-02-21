@@ -83,7 +83,7 @@ export function invalidateCache(userId: number, dataset?: DatasetName): void {
 function parseDateRange(
   dateRange: DateRange | undefined,
   timezone: string,
-  currentCycle?: { start_date: string; end_date: string }
+  currentCycle?: { start_date: string; end_date: string },
 ): { from: string; to: string } {
   if (!dateRange) {
     // Default to current cycle
@@ -115,7 +115,7 @@ function parseDateRange(
         to: `${year}-${String(month + 1).padStart(2, "0")}-${new Date(
           year,
           month + 1,
-          0
+          0,
         ).getDate()}`,
       };
     case "last_month": {
@@ -125,7 +125,7 @@ function parseDateRange(
         from: `${lastMonthYear}-${String(lastMonth + 1).padStart(2, "0")}-01`,
         to: `${lastMonthYear}-${String(lastMonth + 1).padStart(
           2,
-          "0"
+          "0",
         )}-${new Date(lastMonthYear, lastMonth + 1, 0).getDate()}`,
       };
     }
@@ -199,12 +199,12 @@ const BUDGETS_DATASET: DatasetDefinition = {
     if (args.filters) {
       if (args.filters.is_active !== undefined) {
         filtered = filtered.filter(
-          (b) => b.is_active === args.filters!.is_active
+          (b) => b.is_active === args.filters!.is_active,
         );
       }
       if (args.filters.currency) {
         filtered = filtered.filter(
-          (b) => b.currency === args.filters!.currency
+          (b) => b.currency === args.filters!.currency,
         );
       }
     }
@@ -264,6 +264,16 @@ const TRANSACTIONS_DATASET: DatasetDefinition = {
       sqlColumn: "category_id",
       operator: "=",
     },
+    category_name: {
+      type: "string",
+      sqlColumn: "category_name",
+      operator: "ilike",
+    },
+    description: {
+      type: "string",
+      sqlColumn: "description",
+      operator: "ilike",
+    },
     provision_id: {
       type: "number",
       sqlColumn: "provision_id",
@@ -317,7 +327,7 @@ const TRANSACTIONS_DATASET: DatasetDefinition = {
     const dateRange = parseDateRange(
       args.date_range,
       context.timezone,
-      context.currentCycle
+      context.currentCycle,
     );
 
     // Check if querying current cycle or historical
@@ -339,7 +349,7 @@ const TRANSACTIONS_DATASET: DatasetDefinition = {
          LEFT JOIN budget_provisions p ON t.provision_id = p.id
          WHERE t.user_id = $1 AND t.budget_id = $2 AND t.date BETWEEN $3 AND $4
          ORDER BY t.date DESC`,
-        [context.userId, context.budgetId, dateRange.from, dateRange.to]
+        [context.userId, context.budgetId, dateRange.from, dateRange.to],
       );
       transactions = result.rows;
     } else if (context.currentCycle) {
@@ -361,27 +371,41 @@ const TRANSACTIONS_DATASET: DatasetDefinition = {
       }
       if (args.filters.category_id) {
         filtered = filtered.filter(
-          (t: any) => t.category_id === args.filters!.category_id
+          (t: any) => t.category_id === args.filters!.category_id,
+        );
+      }
+      if (args.filters.category_name) {
+        const needle = (args.filters.category_name as string).toLowerCase();
+        filtered = filtered.filter(
+          (t: any) =>
+            t.category_name && t.category_name.toLowerCase().includes(needle),
+        );
+      }
+      if (args.filters.description) {
+        const needle = (args.filters.description as string).toLowerCase();
+        filtered = filtered.filter(
+          (t: any) =>
+            t.description && t.description.toLowerCase().includes(needle),
         );
       }
       if (args.filters.provision_id) {
         filtered = filtered.filter(
-          (t: any) => t.provision_id === args.filters!.provision_id
+          (t: any) => t.provision_id === args.filters!.provision_id,
         );
       }
       if (args.filters.source) {
         filtered = filtered.filter(
-          (t: any) => t.source === args.filters!.source
+          (t: any) => t.source === args.filters!.source,
         );
       }
       if (args.filters.min_amount) {
         filtered = filtered.filter(
-          (t: any) => t.amount >= (args.filters!.min_amount as number)
+          (t: any) => t.amount >= (args.filters!.min_amount as number),
         );
       }
       if (args.filters.max_amount) {
         filtered = filtered.filter(
-          (t: any) => t.amount <= (args.filters!.max_amount as number)
+          (t: any) => t.amount <= (args.filters!.max_amount as number),
         );
       }
     }
@@ -534,17 +558,17 @@ const PROVISIONS_DATASET: DatasetDefinition = {
     if (args.filters) {
       if (args.filters.category_id) {
         filtered = filtered.filter(
-          (p) => p.category_id === args.filters!.category_id
+          (p) => p.category_id === args.filters!.category_id,
         );
       }
       if (args.filters.min_amount) {
         filtered = filtered.filter(
-          (p) => Number(p.amount) >= (args.filters!.min_amount as number)
+          (p) => Number(p.amount) >= (args.filters!.min_amount as number),
         );
       }
       if (args.filters.max_amount) {
         filtered = filtered.filter(
-          (p) => Number(p.amount) <= (args.filters!.max_amount as number)
+          (p) => Number(p.amount) <= (args.filters!.max_amount as number),
         );
       }
     }
@@ -632,7 +656,7 @@ const RECURRING_EXPENSES_DATASET: DatasetDefinition = {
   queryBuilder: async (context: AssistantContext, args: QueryDatasetArgs) => {
     if (!context.budgetId) {
       throw new Error(
-        "budgetId es requerido para consultar gastos recurrentes"
+        "budgetId es requerido para consultar gastos recurrentes",
       );
     }
 
@@ -644,22 +668,22 @@ const RECURRING_EXPENSES_DATASET: DatasetDefinition = {
     if (args.filters) {
       if (args.filters.category_id) {
         filtered = filtered.filter(
-          (r) => r.category_id === args.filters!.category_id
+          (r) => r.category_id === args.filters!.category_id,
         );
       }
       if (args.filters.frequency) {
         filtered = filtered.filter(
-          (r) => r.frequency === args.filters!.frequency
+          (r) => r.frequency === args.filters!.frequency,
         );
       }
       if (args.filters.min_amount) {
         filtered = filtered.filter(
-          (r) => Number(r.amount) >= (args.filters!.min_amount as number)
+          (r) => Number(r.amount) >= (args.filters!.min_amount as number),
         );
       }
       if (args.filters.max_amount) {
         filtered = filtered.filter(
-          (r) => Number(r.amount) <= (args.filters!.max_amount as number)
+          (r) => Number(r.amount) <= (args.filters!.max_amount as number),
         );
       }
     }
@@ -719,7 +743,7 @@ export function listDatasets(): DatasetInfo[] {
 
 export async function queryDataset(
   context: AssistantContext,
-  args: QueryDatasetArgs
+  args: QueryDatasetArgs,
 ): Promise<QueryDatasetResult> {
   const dataset = DATASETS[args.dataset];
   if (!dataset) {
@@ -731,7 +755,7 @@ export async function queryDataset(
     for (const filterKey of Object.keys(args.filters)) {
       if (!dataset.allowedFilters[filterKey]) {
         throw new Error(
-          `Filtro no permitido para ${args.dataset}: ${filterKey}`
+          `Filtro no permitido para ${args.dataset}: ${filterKey}`,
         );
       }
     }
@@ -740,7 +764,7 @@ export async function queryDataset(
   // Validate sort
   if (args.sort && !dataset.allowedSorts[args.sort.field]) {
     throw new Error(
-      `Ordenamiento no permitido para ${args.dataset}: ${args.sort.field}`
+      `Ordenamiento no permitido para ${args.dataset}: ${args.sort.field}`,
     );
   }
 
@@ -760,7 +784,7 @@ export async function queryDataset(
   // Execute query
   const result = (await dataset.queryBuilder(
     context,
-    args
+    args,
   )) as QueryDatasetResult;
   result.dataset = args.dataset;
 
@@ -772,7 +796,7 @@ export async function queryDataset(
 
 export async function aggregateDataset(
   context: AssistantContext,
-  args: AggregateDatasetArgs
+  args: AggregateDatasetArgs,
 ): Promise<AggregateDatasetResult> {
   const dataset = DATASETS[args.dataset];
   if (!dataset) {
@@ -787,12 +811,12 @@ export async function aggregateDataset(
     const aggConfig = dataset.allowedAggregations[args.field];
     if (!aggConfig) {
       throw new Error(
-        `Campo no permitido para agregación en ${args.dataset}: ${args.field}`
+        `Campo no permitido para agregación en ${args.dataset}: ${args.field}`,
       );
     }
     if (!aggConfig.supportedMetrics.includes(args.metric)) {
       throw new Error(
-        `Métrica ${args.metric} no soportada para ${args.field} en ${args.dataset}`
+        `Métrica ${args.metric} no soportada para ${args.field} en ${args.dataset}`,
       );
     }
   }
@@ -805,7 +829,7 @@ export async function aggregateDataset(
     for (const groupField of args.group_by) {
       if (!dataset.allowedGroupBy[groupField]) {
         throw new Error(
-          `Campo de agrupación no permitido para ${args.dataset}: ${groupField}`
+          `Campo de agrupación no permitido para ${args.dataset}: ${groupField}`,
         );
       }
     }
@@ -860,7 +884,7 @@ export async function aggregateDataset(
       const aggregatedValue = computeAggregation(
         groupRows,
         args.metric,
-        args.field
+        args.field,
       );
 
       const resultItem: any = {};
@@ -892,7 +916,7 @@ export async function aggregateDataset(
 function computeAggregation(
   rows: any[],
   metric: string,
-  field?: string
+  field?: string,
 ): number {
   if (rows.length === 0) return 0;
 
@@ -904,7 +928,7 @@ function computeAggregation(
     case "avg": {
       const sum = rows.reduce(
         (sum, row) => sum + (Number(row[field!]) || 0),
-        0
+        0,
       );
       return sum / rows.length;
     }

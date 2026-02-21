@@ -6,7 +6,7 @@
 CREATE TYPE reset_type_enum AS ENUM ('weekly', 'monthly', 'yearly');
 CREATE TYPE frequency_enum AS ENUM ('weekly', 'monthly', 'yearly');
 CREATE TYPE transaction_type_enum AS ENUM ('income', 'expense');
-CREATE TYPE transaction_source_enum AS ENUM ('recurring', 'manual');
+CREATE TYPE transaction_source_enum AS ENUM ('recurring', 'manual', 'fixed');
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -67,6 +67,16 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
             properties: {
               type: { type: "string" },
               category_id: { type: "number" },
+              category_name: {
+                type: "string",
+                description:
+                  "Filtra por nombre de categoría (búsqueda parcial, insensible a mayúsculas). Ej: 'gasolina', 'transporte'",
+              },
+              description: {
+                type: "string",
+                description:
+                  "Filtra por descripción de la transacción (búsqueda parcial, insensible a mayúsculas). Ej: 'restaurante', 'amazon'",
+              },
               provision_id: { type: "number" },
               source: { type: "string" },
               min_amount: { type: "number" },
@@ -277,6 +287,10 @@ EJEMPLOS DE ANÁLISIS:
 - "¿Cuáles son mis gastos más altos?" → queryDataset(transactions, {type: 'expense'}, sort: amount desc, limit: 10)
 - "¿En qué categoría gasto más?" → aggregateDataset(transactions, sum, amount, group_by: ['category_name'], {type: 'expense'})
 - "Comparación mes a mes" → complexAnalysis(month_over_month, transactions, sum, amount)
+- "¿Cuánto llevo gastado en gasolina?" → queryDataset(transactions, {type: 'expense', description: 'gasolina'}) o aggregateDataset con {description: 'gasolina'}
+- "¿Cuánto he gastado en transporte?" → aggregateDataset(transactions, sum, amount, {type: 'expense', category_name: 'transporte'})
+
+IMPORTANTE: Para preguntas sobre un gasto específico (gasolina, restaurante, etc.), usa el filtro 'description' o 'category_name' en queryDataset/aggregateDataset. NO uses listDatasets para esto.
 
 Ahora procesa la consulta del usuario usando las herramientas disponibles.`;
 
@@ -287,7 +301,7 @@ Ahora procesa la consulta del usuario usando las herramientas disponibles.`;
 async function executeTool(
   toolName: string,
   args: any,
-  context: AssistantContext
+  context: AssistantContext,
 ): Promise<any> {
   switch (toolName) {
     case "listDatasets":
@@ -313,13 +327,13 @@ async function executeTool(
 
 async function performComplexAnalysis(
   context: AssistantContext,
-  args: ComplexAnalysisArgs
+  args: ComplexAnalysisArgs,
 ): Promise<ComplexAnalysisResult> {
   const { analysis_type, dataset, metric, field, date_range, filters } = args;
 
   if (dataset !== "transactions") {
     throw new Error(
-      "complexAnalysis solo soporta el dataset 'transactions' por ahora"
+      "complexAnalysis solo soporta el dataset 'transactions' por ahora",
     );
   }
 
@@ -339,7 +353,7 @@ async function performComplexAnalysis(
         const to = `${year}-${String(month + 1).padStart(2, "0")}-${new Date(
           year,
           month + 1,
-          0
+          0,
         ).getDate()}`;
 
         const result = await aggregateDataset(context, {
@@ -365,20 +379,20 @@ async function performComplexAnalysis(
       for (let month = 0; month < 12; month++) {
         const thisYearFrom = `${currentYear}-${String(month + 1).padStart(
           2,
-          "0"
+          "0",
         )}-01`;
         const thisYearTo = `${currentYear}-${String(month + 1).padStart(
           2,
-          "0"
+          "0",
         )}-${new Date(currentYear, month + 1, 0).getDate()}`;
 
         const lastYearFrom = `${currentYear - 1}-${String(month + 1).padStart(
           2,
-          "0"
+          "0",
         )}-01`;
         const lastYearTo = `${currentYear - 1}-${String(month + 1).padStart(
           2,
-          "0"
+          "0",
         )}-${new Date(currentYear - 1, month + 1, 0).getDate()}`;
 
         const [thisYear, lastYear] = await Promise.all([
@@ -429,7 +443,7 @@ async function performComplexAnalysis(
         const to = `${year}-${String(month + 1).padStart(2, "0")}-${new Date(
           year,
           month + 1,
-          0
+          0,
         ).getDate()}`;
 
         const result = await aggregateDataset(context, {
@@ -490,8 +504,8 @@ async function performComplexAnalysis(
           trend === "increasing"
             ? "creciente"
             : trend === "decreasing"
-            ? "decreciente"
-            : "estable"
+              ? "decreciente"
+              : "estable"
         }`,
       ],
     },
@@ -504,7 +518,7 @@ async function performComplexAnalysis(
 
 export async function processQuery(
   question: string,
-  context: AssistantContext
+  context: AssistantContext,
 ): Promise<AssistantQueryResponse> {
   if (!OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY no está configurada");
@@ -574,7 +588,7 @@ export async function processQuery(
 
       if (toolCallCount > MAX_TOOL_CALLS) {
         throw new Error(
-          `Se excedió el límite de ${MAX_TOOL_CALLS} llamadas a herramientas. Pregunta demasiado compleja.`
+          `Se excedió el límite de ${MAX_TOOL_CALLS} llamadas a herramientas. Pregunta demasiado compleja.`,
         );
       }
 
@@ -611,7 +625,7 @@ export async function processQuery(
   }
 
   throw new Error(
-    `Se excedió el límite de ${MAX_TOOL_CALLS} llamadas a herramientas`
+    `Se excedió el límite de ${MAX_TOOL_CALLS} llamadas a herramientas`,
   );
 }
 
@@ -641,7 +655,7 @@ export function formatDate(dateStr: string): string {
 
 export async function processReceiptText(
   text: string,
-  categories: Array<{ id: number; name: string }>
+  categories: Array<{ id: number; name: string }>,
 ): Promise<ScanReceiptResponse> {
   const categoryNames = categories.map((c) => c.name).join(", ");
 
@@ -702,7 +716,7 @@ ${text}`;
       category:
         parsed.category &&
         categories.some(
-          (c) => c.name.toLowerCase() === parsed.category.toLowerCase()
+          (c) => c.name.toLowerCase() === parsed.category.toLowerCase(),
         )
           ? parsed.category
           : null,
