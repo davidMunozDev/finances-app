@@ -267,12 +267,12 @@ const TRANSACTIONS_DATASET: DatasetDefinition = {
     category_name: {
       type: "string",
       sqlColumn: "category_name",
-      operator: "ilike",
+      operator: "=",
     },
     description: {
       type: "string",
       sqlColumn: "description",
-      operator: "ilike",
+      operator: "=",
     },
     provision_id: {
       type: "number",
@@ -515,6 +515,11 @@ const PROVISIONS_DATASET: DatasetDefinition = {
       sqlColumn: "category_id",
       operator: "=",
     },
+    name: {
+      type: "string",
+      sqlColumn: "name",
+      operator: "=",
+    },
     min_amount: {
       type: "number",
       sqlColumn: "amount",
@@ -559,6 +564,12 @@ const PROVISIONS_DATASET: DatasetDefinition = {
       if (args.filters.category_id) {
         filtered = filtered.filter(
           (p) => p.category_id === args.filters!.category_id,
+        );
+      }
+      if (args.filters.name) {
+        const needle = (args.filters.name as string).toLowerCase();
+        filtered = filtered.filter(
+          (p) => p.name && p.name.toLowerCase().includes(needle),
         );
       }
       if (args.filters.min_amount) {

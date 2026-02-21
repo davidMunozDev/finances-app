@@ -77,6 +77,16 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
                 description:
                   "Filtra por descripción de la transacción (búsqueda parcial, insensible a mayúsculas). Ej: 'restaurante', 'amazon'",
               },
+              provision_name: {
+                type: "string",
+                description:
+                  "Filtra transacciones por nombre de provisión (búsqueda parcial). Ej: 'alquiler', 'hipoteca'",
+              },
+              name: {
+                type: "string",
+                description:
+                  "Filtra provisiones por nombre (búsqueda parcial). Ej: 'alquiler', 'supermercado'",
+              },
               provision_id: { type: "number" },
               source: { type: "string" },
               min_amount: { type: "number" },
@@ -287,10 +297,17 @@ EJEMPLOS DE ANÁLISIS:
 - "¿Cuáles son mis gastos más altos?" → queryDataset(transactions, {type: 'expense'}, sort: amount desc, limit: 10)
 - "¿En qué categoría gasto más?" → aggregateDataset(transactions, sum, amount, group_by: ['category_name'], {type: 'expense'})
 - "Comparación mes a mes" → complexAnalysis(month_over_month, transactions, sum, amount)
-- "¿Cuánto llevo gastado en gasolina?" → queryDataset(transactions, {type: 'expense', description: 'gasolina'}) o aggregateDataset con {description: 'gasolina'}
+- "¿Cuánto llevo gastado en gasolina?" → aggregateDataset(transactions, sum, amount, {type: 'expense', description: 'gasolina'})
 - "¿Cuánto he gastado en transporte?" → aggregateDataset(transactions, sum, amount, {type: 'expense', category_name: 'transporte'})
+- "¿Cuánto tengo previsto gastar en alquiler?" → queryDataset(provisions, {name: 'alquiler'}) — el campo 'amount' de provisions es lo previsto
+- "¿Cuánto he gastado vs lo previsto en X provisión?" → 1) queryDataset(provisions, {name: 'X'}) para obtener amount previsto, 2) aggregateDataset(transactions, sum, amount, {type: 'expense', provision_name: 'X'}) para lo real gastado
+- "¿Cuánto he gastado en la provisión hipoteca?" → aggregateDataset(transactions, sum, amount, {type: 'expense', provision_name: 'hipoteca'})
 
-IMPORTANTE: Para preguntas sobre un gasto específico (gasolina, restaurante, etc.), usa el filtro 'description' o 'category_name' en queryDataset/aggregateDataset. NO uses listDatasets para esto.
+IMPORTANTE:
+- Para preguntas sobre lo PREVISTO: usa dataset 'provisions' con filtro 'name'
+- Para preguntas sobre lo GASTADO en una provisión: usa dataset 'transactions' con filtro 'provision_name'
+- Para preguntas sobre descripción de gasto: usa filtro 'description' en transactions
+- Para preguntas por categoría: usa filtro 'category_name' en transactions
 
 Ahora procesa la consulta del usuario usando las herramientas disponibles.`;
 
