@@ -23,7 +23,7 @@ import cookieParser from "cookie-parser";
 dotenv.config();
 
 const app = express();
-const swaggerDocument = YAML.load(path.join(process.cwd(), "api.yaml"));
+const swaggerDocument = YAML.load(path.join(__dirname, "..", "api.yaml"));
 
 app.use(cors());
 app.use(express.json());
