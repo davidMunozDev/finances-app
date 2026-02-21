@@ -1,4 +1,7 @@
-import type { ResultSetHeader, RowDataPacket } from "mysql2";
+import type { QueryResult, QueryResultRow } from "pg";
 
-export type DBRow<T> = RowDataPacket & T;
-export type DBResult = ResultSetHeader;
+// Para PostgreSQL, las rows ya son del tipo T directamente
+export type DBRow<T> = T;
+
+// QueryResult incluye rows, rowCount, command, etc.
+export type DBResult<T extends QueryResultRow = any> = QueryResult<T>;

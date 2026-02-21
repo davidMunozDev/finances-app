@@ -57,50 +57,48 @@ async function storeRefreshToken(params: {
   tokenHash: string;
   expiresAt: Date;
 }) {
-  await pool.query<DBResult>(
+  await pool.query(
     `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-     VALUES (?, ?, ?)`,
+     VALUES ($1, $2, $3)`,
     [params.userId, params.tokenHash, params.expiresAt]
   );
 }
 
 async function findRefreshToken(tokenHash: string) {
-  const [rows] = await pool.query<
-    DBRow<{
-      id: number;
-      user_id: number;
-      expires_at: string;
-      revoked_at: string | null;
-      replaced_by_token_hash: string | null;
-    }>[]
-  >(
+  const result = await pool.query<{
+    id: number;
+    user_id: number;
+    expires_at: string;
+    revoked_at: string | null;
+    replaced_by_token_hash: string | null;
+  }>(
     `SELECT id, user_id, expires_at, revoked_at, replaced_by_token_hash
      FROM refresh_tokens
-     WHERE token_hash = ?
+     WHERE token_hash = $1
      LIMIT 1`,
     [tokenHash]
   );
 
-  return rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 async function rotateRefreshToken(params: {
   oldHash: string;
   newHash: string;
 }) {
-  await pool.query<DBResult>(
+  await pool.query(
     `UPDATE refresh_tokens
-     SET revoked_at = NOW(), replaced_by_token_hash = ?
-     WHERE token_hash = ? AND revoked_at IS NULL`,
+     SET revoked_at = CURRENT_TIMESTAMP, replaced_by_token_hash = $1
+     WHERE token_hash = $2 AND revoked_at IS NULL`,
     [params.newHash, params.oldHash]
   );
 }
 
 async function revokeRefreshToken(tokenHash: string) {
-  await pool.query<DBResult>(
+  await pool.query(
     `UPDATE refresh_tokens
-     SET revoked_at = NOW()
-     WHERE token_hash = ? AND revoked_at IS NULL`,
+     SET revoked_at = CURRENT_TIMESTAMP
+     WHERE token_hash = $1 AND revoked_at IS NULL`,
     [tokenHash]
   );
 }
@@ -122,12 +120,12 @@ export async function register(req: Request, res: Response) {
     });
   }
 
-  const [existing] = await pool.query<DBRow<Pick<UserRow, "id">>[]>(
-    "SELECT id FROM users WHERE email = ? LIMIT 1",
+  const existing = await pool.query<Pick<UserRow, "id">>(
+    "SELECT id FROM users WHERE email = $1 LIMIT 1",
     [email]
   );
 
-  if (existing.length) {
+  if (existing.rows.length) {
     throw new AppError({
       status: HTTP_STATUS.CONFLICT,
       code: ERROR_CODES.CONFLICT,
@@ -137,13 +135,14 @@ export async function register(req: Request, res: Response) {
 
   const password_hash = await hashPassword(password);
 
-  const [result] = await pool.query<DBResult>(
+  const result = await pool.query<{ id: number }>(
     `INSERT INTO users (email, password_hash, full_name, default_currency)
-     VALUES (?, ?, ?, ?)`,
+     VALUES ($1, $2, $3, $4)
+     RETURNING id`,
     [email, password_hash, full_name ?? null, default_currency ?? "EUR"]
   );
 
-  const userId = result.insertId;
+  const userId = result.rows[0].id;
 
   // emitir tokens
   const access_token = signAccessToken(userId);
@@ -183,15 +182,15 @@ export async function login(req: Request, res: Response) {
     });
   }
 
-  const [rows] = await pool.query<DBRow<UserRow>[]>(
+  const result = await pool.query<UserRow>(
     `SELECT id, email, password_hash, full_name, default_currency, onboarding_completed
      FROM users
-     WHERE email = ?
+     WHERE email = $1
      LIMIT 1`,
     [email]
   );
 
-  if (!rows.length) {
+  if (!result.rows.length) {
     throw new AppError({
       status: HTTP_STATUS.UNAUTHORIZED,
       code: ERROR_CODES.UNAUTHORIZED,
@@ -199,9 +198,9 @@ export async function login(req: Request, res: Response) {
     });
   }
 
-  const user = rows[0];
-  const ok = await comparePassword(password, user.password_hash);
-  if (!ok) {
+  const user = result.rows[0];
+  const isValid = await comparePassword(password, user.password_hash);
+  if (!isValid) {
     throw new AppError({
       status: HTTP_STATUS.BAD_REQUEST,
       code: ERROR_CODES.VALIDATION_ERROR,
@@ -320,12 +319,12 @@ export async function me(req: AuthRequest, res: Response) {
     });
   }
 
-  const [rows] = await pool.query<DBRow<Omit<UserRow, "password_hash">>[]>(
-    "SELECT id, email, full_name, default_currency, onboarding_completed, created_at FROM users WHERE id = ?",
+  const result = await pool.query<Omit<UserRow, "password_hash">>(
+    "SELECT id, email, full_name, default_currency, onboarding_completed, created_at FROM users WHERE id = $1",
     [userId]
   );
 
-  if (!rows.length) {
+  if (!result.rows.length) {
     throw new AppError({
       status: HTTP_STATUS.NOT_FOUND,
       code: ERROR_CODES.NOT_FOUND,
@@ -333,7 +332,7 @@ export async function me(req: AuthRequest, res: Response) {
     });
   }
 
-  const user = rows[0];
+  const user = result.rows[0];
   return res.json({
     ...user,
     onboarding_completed: Boolean(user.onboarding_completed),
@@ -353,17 +352,14 @@ export async function deleteUser(req: AuthRequest, res: Response) {
 
   // Opcional: revocar todos los refresh tokens del usuario (si tienes endpoint)
   await pool.query(
-    `UPDATE refresh_tokens SET revoked_at = NOW()
-     WHERE user_id = ? AND revoked_at IS NULL`,
+    `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP
+     WHERE user_id = $1 AND revoked_at IS NULL`,
     [userId]
   );
 
-  const [result] = await pool.query<DBResult>(
-    "DELETE FROM users WHERE id = ?",
-    [userId]
-  );
+  const result = await pool.query("DELETE FROM users WHERE id = $1", [userId]);
 
-  if (result.affectedRows === 0) {
+  if ((result.rowCount ?? 0) === 0) {
     throw new AppError({
       status: HTTP_STATUS.NOT_FOUND,
       code: ERROR_CODES.NOT_FOUND,
@@ -397,21 +393,22 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
     });
   }
 
-  const connection = await pool.getConnection();
+  const client = await pool.connect();
 
   try {
-    await connection.beginTransaction();
+    await client.query("BEGIN");
 
     // 1. Actualizar datos del usuario
-    await connection.query(
-      "UPDATE users SET full_name = ?, default_currency = ? WHERE id = ?",
+    await client.query(
+      "UPDATE users SET full_name = $1, default_currency = $2 WHERE id = $3",
       [data.user.full_name, data.user.default_currency, userId]
     );
 
     // 2. Crear presupuesto
-    const [budgetResult] = await connection.query<DBResult>(
+    const budgetResult = await client.query<{ id: number }>(
       `INSERT INTO budgets (user_id, name, currency, reset_type, reset_dow, reset_dom, reset_month, reset_day)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id`,
       [
         userId,
         data.budget.name,
@@ -423,30 +420,30 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
         data.budget.reset_day ?? null,
       ]
     );
-    const budgetId = budgetResult.insertId;
+    const budgetId = budgetResult.rows[0].id;
 
     // 3. Crear categorías personalizadas y mapear nombres a IDs
     const categoryMap = new Map<string, number>();
     for (const cat of data.categories) {
       // Check if category already exists (global or user-specific)
-      const [existing] = await connection.query<DBRow<{ id: number }>[]>(
+      const existing = await client.query<{ id: number }>(
         `SELECT id FROM categories 
-         WHERE name = ? AND (user_id IS NULL OR user_id = ?)
+         WHERE name = $1 AND (user_id IS NULL OR user_id = $2)
          LIMIT 1`,
         [cat.name, userId]
       );
 
       let categoryId: number;
-      if (existing.length > 0) {
+      if (existing.rows.length > 0) {
         // Use existing category
-        categoryId = existing[0].id;
+        categoryId = existing.rows[0].id;
       } else {
         // Create new user-specific category
-        const [catResult] = await connection.query<DBResult>(
-          "INSERT INTO categories (user_id, name, icon) VALUES (?, ?, ?)",
+        const catResult = await client.query<{ id: number }>(
+          "INSERT INTO categories (user_id, name, icon) VALUES ($1, $2, $3) RETURNING id",
           [userId, cat.name, cat.icon ?? null]
         );
-        categoryId = catResult.insertId;
+        categoryId = catResult.rows[0].id;
       }
 
       categoryMap.set(cat.name, categoryId);
@@ -462,20 +459,20 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
           message: `Categoría '${provision.category_name}' no encontrada`,
         });
       }
-      await connection.query(
+      await client.query(
         `INSERT INTO budget_provisions (budget_id, category_id, name, amount)
-         VALUES (?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4)`,
         [budgetId, categoryId, provision.name, provision.amount]
       );
     }
 
     // 5. Marcar onboarding como completado
-    await connection.query(
-      "UPDATE users SET onboarding_completed = TRUE WHERE id = ?",
+    await client.query(
+      "UPDATE users SET onboarding_completed = TRUE WHERE id = $1",
       [userId]
     );
 
-    await connection.commit();
+    await client.query("COMMIT");
 
     // 6. Crear el ciclo inicial del presupuesto (fuera de la transacción)
     const cycle = await syncBudgetCycle({ userId, budgetId });
@@ -492,7 +489,7 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
     for (const income of data.incomes) {
       await pool.query(
         `INSERT INTO transactions (user_id, budget_id, cycle_id, category_id, type, description, amount, date, source)
-         VALUES (?, ?, ?, NULL, 'income', ?, ?, ?, 'manual')`,
+         VALUES ($1, $2, $3, NULL, 'income', $4, $5, $6, 'manual')`,
         [userId, budgetId, cycle.id, income.description, income.amount, dateISO]
       );
     }
@@ -503,9 +500,9 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
       budget_id: budgetId,
     });
   } catch (error) {
-    await connection.rollback();
+    await client.query("ROLLBACK");
     throw error;
   } finally {
-    connection.release();
+    client.release();
   }
 }

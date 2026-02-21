@@ -16,12 +16,12 @@ export async function createManualTransaction(params: {
 }) {
   // Validar provision_id si está presente
   if (params.provisionId) {
-    const [[provision]] = await pool.query<DBRow<ProvisionRow>[]>(
-      `SELECT id, budget_id, category_id FROM budget_provisions WHERE id = ?`,
+    const provision = await pool.query<ProvisionRow>(
+      `SELECT id, budget_id, category_id FROM budget_provisions WHERE id = $1`,
       [params.provisionId]
     );
 
-    if (!provision) {
+    if (!provision.rows[0]) {
       throw new AppError({
         status: 400,
         code: ERROR_CODES.VALIDATION_ERROR,
@@ -29,7 +29,7 @@ export async function createManualTransaction(params: {
       });
     }
 
-    if (provision.budget_id !== params.budgetId) {
+    if (provision.rows[0].budget_id !== params.budgetId) {
       throw new AppError({
         status: 400,
         code: ERROR_CODES.VALIDATION_ERROR,
@@ -37,7 +37,7 @@ export async function createManualTransaction(params: {
       });
     }
 
-    if (provision.category_id !== params.categoryId) {
+    if (provision.rows[0].category_id !== params.categoryId) {
       throw new AppError({
         status: 400,
         code: ERROR_CODES.VALIDATION_ERROR,
@@ -46,9 +46,10 @@ export async function createManualTransaction(params: {
     }
   }
 
-  const [result] = await pool.query<DBResult>(
+  const result = await pool.query<{ id: number }>(
     `INSERT INTO transactions (user_id, budget_id, cycle_id, category_id, provision_id, type, description, amount, date, source)
-     VALUES (?, ?, ?, ?, ?, 'expense', ?, ?, ?, 'manual')`,
+     VALUES ($1, $2, $3, $4, $5, 'expense', $6, $7, $8, 'manual')
+     RETURNING id`,
     [
       params.userId,
       params.budgetId,
@@ -60,7 +61,7 @@ export async function createManualTransaction(params: {
       params.dateISO,
     ]
   );
-  return result.insertId;
+  return result.rows[0].id;
 }
 
 export async function listCycleTransactions(params: {
@@ -68,17 +69,17 @@ export async function listCycleTransactions(params: {
   budgetId: number;
   cycleId: number;
 }) {
-  const [rows] = await pool.query<DBRow<any>[]>(
+  const result = await pool.query<any>(
     `SELECT t.id, t.category_id, t.provision_id, t.description, t.amount, t.date, t.type, t.source, 
             c.name AS category_name, p.name AS provision_name
      FROM transactions t
      LEFT JOIN categories c ON t.category_id = c.id
      LEFT JOIN budget_provisions p ON t.provision_id = p.id
-     WHERE t.user_id = ? AND t.budget_id = ? AND t.cycle_id = ?
+     WHERE t.user_id = $1 AND t.budget_id = $2 AND t.cycle_id = $3
      ORDER BY t.date DESC, t.id DESC`,
     [params.userId, params.budgetId, params.cycleId]
   );
-  return rows;
+  return result.rows;
 }
 
 export async function getCycleTotals(params: {
@@ -86,13 +87,13 @@ export async function getCycleTotals(params: {
   budgetId: number;
   cycleId: number;
 }) {
-  const [[row]] = await pool.query<DBRow<{ total: string }>[]>(
+  const result = await pool.query<{ total: string }>(
     `SELECT COALESCE(SUM(amount), 0) AS total
      FROM transactions
-     WHERE user_id = ? AND budget_id = ? AND cycle_id = ? AND type = 'expense' AND source != 'fixed'`,
+     WHERE user_id = $1 AND budget_id = $2 AND cycle_id = $3 AND type = 'expense' AND source != 'fixed'`,
     [params.userId, params.budgetId, params.cycleId]
   );
-  return Number(row.total);
+  return Number(result.rows[0].total);
 }
 
 export async function getCycleIncomes(params: {
@@ -100,13 +101,13 @@ export async function getCycleIncomes(params: {
   budgetId: number;
   cycleId: number;
 }) {
-  const [[row]] = await pool.query<DBRow<{ total: string }>[]>(
+  const result = await pool.query<{ total: string }>(
     `SELECT COALESCE(SUM(amount), 0) AS total
      FROM transactions
-     WHERE user_id = ? AND budget_id = ? AND cycle_id = ? AND type = 'income'`,
+     WHERE user_id = $1 AND budget_id = $2 AND cycle_id = $3 AND type = 'income'`,
     [params.userId, params.budgetId, params.cycleId]
   );
-  return Number(row.total);
+  return Number(result.rows[0].total);
 }
 
 export async function listExpenses(params: {
@@ -123,38 +124,39 @@ export async function listExpenses(params: {
      FROM transactions t
      LEFT JOIN categories c ON t.category_id = c.id
      LEFT JOIN budget_provisions p ON t.provision_id = p.id
-     WHERE t.user_id = ? AND t.budget_id = ? AND t.type = 'expense'`;
+     WHERE t.user_id = $1 AND t.budget_id = $2 AND t.type = 'expense'`;
 
   const queryParams: any[] = [params.userId, params.budgetId];
+  let paramIndex = 3;
 
   if (params.all) {
     // No additional filters - get all expenses for this budget
   } else if (params.startDate && params.endDate) {
     // Date range filter
-    query += ` AND t.date >= ? AND t.date <= ?`;
+    query += ` AND t.date >= $${paramIndex++} AND t.date <= $${paramIndex++}`;
     queryParams.push(params.startDate, params.endDate);
   } else if (params.startDate) {
     // Only start date
-    query += ` AND t.date >= ?`;
+    query += ` AND t.date >= $${paramIndex++}`;
     queryParams.push(params.startDate);
   } else if (params.endDate) {
     // Only end date
-    query += ` AND t.date <= ?`;
+    query += ` AND t.date <= $${paramIndex++}`;
     queryParams.push(params.endDate);
   } else if (params.cycleId) {
     // Default: current cycle
-    query += ` AND t.cycle_id = ?`;
+    query += ` AND t.cycle_id = $${paramIndex++}`;
     queryParams.push(params.cycleId);
   }
 
   // Filter by provision_id if provided
   if (params.provisionId) {
-    query += ` AND t.provision_id = ?`;
+    query += ` AND t.provision_id = $${paramIndex++}`;
     queryParams.push(params.provisionId);
   }
 
   query += ` ORDER BY t.date DESC, t.id DESC`;
 
-  const [rows] = await pool.query<DBRow<any>[]>(query, queryParams);
-  return rows;
+  const result = await pool.query<any>(query, queryParams);
+  return result.rows;
 }

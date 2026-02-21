@@ -215,6 +215,9 @@ const BUDGETS_DATASET: DatasetDefinition = {
       filtered.sort((a, b) => {
         const aVal = a[sortField];
         const bVal = b[sortField];
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
         const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
         return args.sort!.direction === "asc" ? comparison : -comparison;
       });
@@ -327,18 +330,18 @@ const TRANSACTIONS_DATASET: DatasetDefinition = {
 
     if (useHistorical) {
       // For historical queries, use direct SQL query
-      const [rows] = await pool.query<DBRow<any>[]>(
+      const result = await pool.query<any>(
         `SELECT t.*, 
                 c.name as category_name,
                 p.name as provision_name
          FROM transactions t
          LEFT JOIN categories c ON t.category_id = c.id
          LEFT JOIN budget_provisions p ON t.provision_id = p.id
-         WHERE t.user_id = ? AND t.budget_id = ? AND t.date BETWEEN ? AND ?
+         WHERE t.user_id = $1 AND t.budget_id = $2 AND t.date BETWEEN $3 AND $4
          ORDER BY t.date DESC`,
         [context.userId, context.budgetId, dateRange.from, dateRange.to]
       );
-      transactions = rows;
+      transactions = result.rows;
     } else if (context.currentCycle) {
       transactions = await listCycleTransactions({
         userId: context.userId,
@@ -450,6 +453,9 @@ const CATEGORIES_DATASET: DatasetDefinition = {
       filtered.sort((a, b) => {
         const aVal = a[sortField];
         const bVal = b[sortField];
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
         const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
         return args.sort!.direction === "asc" ? comparison : -comparison;
       });
@@ -664,6 +670,9 @@ const RECURRING_EXPENSES_DATASET: DatasetDefinition = {
       filtered.sort((a, b) => {
         const aVal = a[sortField];
         const bVal = b[sortField];
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
         const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
         return args.sort!.direction === "asc" ? comparison : -comparison;
       });

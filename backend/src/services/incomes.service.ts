@@ -9,9 +9,10 @@ export async function createManualIncome(params: {
   amount: number;
   dateISO: string; // YYYY-MM-DD
 }) {
-  const [result] = await pool.query<DBResult>(
+  const result = await pool.query<{ id: number }>(
     `INSERT INTO transactions (user_id, budget_id, cycle_id, category_id, type, description, amount, date, source)
-     VALUES (?, ?, ?, NULL, 'income', ?, ?, ?, 'manual')`,
+     VALUES ($1, $2, $3, NULL, 'income', $4, $5, $6, 'manual')
+     RETURNING id`,
     [
       params.userId,
       params.budgetId,
@@ -21,7 +22,7 @@ export async function createManualIncome(params: {
       params.dateISO,
     ]
   );
-  return result.insertId;
+  return result.rows[0].id;
 }
 
 export async function listCycleIncomes(params: {
@@ -29,15 +30,15 @@ export async function listCycleIncomes(params: {
   budgetId: number;
   cycleId: number;
 }) {
-  const [rows] = await pool.query<DBRow<any>[]>(
+  const result = await pool.query<any>(
     `SELECT id, description, amount, date, source
      FROM transactions
-     WHERE user_id = ? AND budget_id = ? AND cycle_id = ?
+     WHERE user_id = $1 AND budget_id = $2 AND cycle_id = $3
        AND type = 'income'
      ORDER BY date DESC, id DESC`,
     [params.userId, params.budgetId, params.cycleId]
   );
-  return rows;
+  return result.rows;
 }
 
 export async function updateIncome(params: {
@@ -48,10 +49,10 @@ export async function updateIncome(params: {
   amount: number;
   dateISO: string;
 }) {
-  const [result] = await pool.query<DBResult>(
+  const result = await pool.query(
     `UPDATE transactions
-     SET description = ?, amount = ?, date = ?
-     WHERE id = ? AND user_id = ? AND budget_id = ? AND type = 'income'`,
+     SET description = $1, amount = $2, date = $3
+     WHERE id = $4 AND user_id = $5 AND budget_id = $6 AND type = 'income'`,
     [
       params.description ?? null,
       params.amount,
@@ -61,7 +62,7 @@ export async function updateIncome(params: {
       params.budgetId,
     ]
   );
-  return result.affectedRows > 0;
+  return (result.rowCount ?? 0) > 0;
 }
 
 export async function deleteIncome(params: {
@@ -69,10 +70,10 @@ export async function deleteIncome(params: {
   budgetId: number;
   incomeId: number;
 }) {
-  const [result] = await pool.query<DBResult>(
+  const result = await pool.query(
     `DELETE FROM transactions
-     WHERE id = ? AND user_id = ? AND budget_id = ? AND type = 'income'`,
+     WHERE id = $1 AND user_id = $2 AND budget_id = $3 AND type = 'income'`,
     [params.incomeId, params.userId, params.budgetId]
   );
-  return result.affectedRows > 0;
+  return (result.rowCount ?? 0) > 0;
 }

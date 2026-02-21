@@ -7,33 +7,33 @@ import type {
 } from "../types/budget.types";
 
 async function getUserCurrency(userId: number) {
-  const [rows] = await pool.query<DBRow<{ default_currency: string }>[]>(
-    "SELECT default_currency FROM users WHERE id = ? LIMIT 1",
+  const result = await pool.query<{ default_currency: string }>(
+    "SELECT default_currency FROM users WHERE id = $1 LIMIT 1",
     [userId]
   );
-  return rows[0]?.default_currency ?? "EUR";
+  return result.rows[0]?.default_currency ?? "EUR";
 }
 
 export async function listBudgets(userId: number) {
-  const [rows] = await pool.query<DBRow<BudgetRow>[]>(
+  const result = await pool.query<BudgetRow>(
     `SELECT id, user_id, name, currency, reset_type, reset_dow, reset_dom, reset_month, reset_day, is_active
      FROM budgets
-     WHERE user_id = ? AND is_active = TRUE
+     WHERE user_id = $1 AND is_active = TRUE
      ORDER BY id DESC`,
     [userId]
   );
-  return rows;
+  return result.rows;
 }
 
 export async function getBudgetById(userId: number, budgetId: number) {
-  const [rows] = await pool.query<DBRow<BudgetRow>[]>(
+  const result = await pool.query<BudgetRow>(
     `SELECT id, user_id, name, currency, reset_type, reset_dow, reset_dom, reset_month, reset_day, is_active
      FROM budgets
-     WHERE id = ? AND user_id = ?
+     WHERE id = $1 AND user_id = $2
      LIMIT 1`,
     [budgetId, userId]
   );
-  return rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 export async function createBudget(userId: number, body: CreateBudgetBody) {
@@ -46,9 +46,10 @@ export async function createBudget(userId: number, body: CreateBudgetBody) {
   const reset_month = reset_type === "yearly" ? body.reset_month : null;
   const reset_day = reset_type === "yearly" ? body.reset_day : null;
 
-  const [result] = await pool.query<DBResult>(
+  const result = await pool.query<{ id: number }>(
     `INSERT INTO budgets (user_id, name, currency, reset_type, reset_dow, reset_dom, reset_month, reset_day)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id`,
     [
       userId,
       body.name,
@@ -61,7 +62,7 @@ export async function createBudget(userId: number, body: CreateBudgetBody) {
     ]
   );
 
-  return getBudgetById(userId, result.insertId);
+  return getBudgetById(userId, result.rows[0].id);
 }
 
 export async function updateBudget(
@@ -71,14 +72,15 @@ export async function updateBudget(
 ) {
   const fields: string[] = [];
   const values: Array<string | number | null> = [];
+  let paramIndex = 1;
 
   if (body.name !== undefined) {
-    fields.push("name = ?");
+    fields.push(`name = $${paramIndex++}`);
     values.push(body.name);
   }
 
   if (body.reset_type !== undefined) {
-    fields.push("reset_type = ?");
+    fields.push(`reset_type = $${paramIndex++}`);
     values.push(body.reset_type);
 
     // limpiamos y seteamos reglas
@@ -91,13 +93,13 @@ export async function updateBudget(
     const reset_day =
       body.reset_type === "yearly" ? (body as any).reset_day : null;
 
-    fields.push("reset_dow = ?");
+    fields.push(`reset_dow = $${paramIndex++}`);
     values.push(reset_dow);
-    fields.push("reset_dom = ?");
+    fields.push(`reset_dom = $${paramIndex++}`);
     values.push(reset_dom);
-    fields.push("reset_month = ?");
+    fields.push(`reset_month = $${paramIndex++}`);
     values.push(reset_month);
-    fields.push("reset_day = ?");
+    fields.push(`reset_day = $${paramIndex++}`);
     values.push(reset_day);
   }
 
@@ -106,7 +108,9 @@ export async function updateBudget(
   values.push(budgetId, userId);
 
   await pool.query(
-    `UPDATE budgets SET ${fields.join(", ")} WHERE id = ? AND user_id = ?`,
+    `UPDATE budgets SET ${fields.join(
+      ", "
+    )} WHERE id = $${paramIndex++} AND user_id = $${paramIndex}`,
     values
   );
 
@@ -115,9 +119,9 @@ export async function updateBudget(
 
 export async function deleteBudget(userId: number, budgetId: number) {
   // Soft delete (mejor para histórico si lo necesitas)
-  const [result] = await pool.query<DBResult>(
-    `UPDATE budgets SET is_active = FALSE WHERE id = ? AND user_id = ?`,
+  const result = await pool.query(
+    `UPDATE budgets SET is_active = FALSE WHERE id = $1 AND user_id = $2`,
     [budgetId, userId]
   );
-  return result.affectedRows > 0;
+  return (result.rowCount ?? 0) > 0;
 }

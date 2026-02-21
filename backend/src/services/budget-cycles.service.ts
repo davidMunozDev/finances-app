@@ -78,43 +78,44 @@ function computeCurrentCycle(
 }
 
 async function getBudget(budgetId: number, userId: number) {
-  const [rows] = await pool.query<DBRow<BudgetRow>[]>(
+  const result = await pool.query<BudgetRow>(
     `SELECT id, user_id, name, currency, reset_type, reset_dow, reset_dom, reset_month, reset_day, is_active
      FROM budgets
-     WHERE id = ? AND user_id = ?
+     WHERE id = $1 AND user_id = $2
      LIMIT 1`,
     [budgetId, userId]
   );
-  return rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 async function getActiveCycle(budgetId: number, todayISO: string) {
-  const [rows] = await pool.query<DBRow<BudgetCycleRow>[]>(
+  const result = await pool.query<BudgetCycleRow>(
     `SELECT id, budget_id, start_date, end_date
      FROM budget_cycles
-     WHERE budget_id = ?
-       AND start_date <= ?
-       AND end_date >= ?
+     WHERE budget_id = $1
+       AND start_date <= $2
+       AND end_date >= $3
      ORDER BY start_date DESC
      LIMIT 1`,
     [budgetId, todayISO, todayISO]
   );
-  return rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 async function createCycle(budgetId: number, startISO: string, endISO: string) {
-  const [result] = await pool.query<DBResult>(
+  const result = await pool.query<{ id: number }>(
     `INSERT INTO budget_cycles (budget_id, start_date, end_date)
-     VALUES (?, ?, ?)`,
+     VALUES ($1, $2, $3)
+     RETURNING id`,
     [budgetId, startISO, endISO]
   );
-  const id = result.insertId;
+  const id = result.rows[0].id;
 
-  const [rows] = await pool.query<DBRow<BudgetCycleRow>[]>(
-    `SELECT id, budget_id, start_date, end_date FROM budget_cycles WHERE id = ?`,
+  const cycleResult = await pool.query<BudgetCycleRow>(
+    `SELECT id, budget_id, start_date, end_date FROM budget_cycles WHERE id = $1`,
     [id]
   );
-  return rows[0];
+  return cycleResult.rows[0];
 }
 
 async function insertRecurringTransactionsForCycle(params: {
@@ -123,25 +124,25 @@ async function insertRecurringTransactionsForCycle(params: {
   cycle: BudgetCycleRow;
 }) {
   // Traemos recurrentes
-  const [recurrings] = await pool.query<
-    DBRow<{
-      id: number;
-      budget_id: number;
-      category_id: number;
-      name: string;
-      amount: string;
-      frequency: "weekly" | "monthly" | "yearly";
-      dow: number | null;
-      dom: number | null;
-      month: number | null;
-      day: number | null;
-    }>[]
-  >(
+  const recurringsResult = await pool.query<{
+    id: number;
+    budget_id: number;
+    category_id: number;
+    name: string;
+    amount: string;
+    frequency: "weekly" | "monthly" | "yearly";
+    dow: number | null;
+    dom: number | null;
+    month: number | null;
+    day: number | null;
+  }>(
     `SELECT id, budget_id, category_id, name, amount, frequency, dow, dom, month, day
      FROM budget_recurring_expenses
-     WHERE budget_id = ?`,
+     WHERE budget_id = $1`,
     [params.budgetId]
   );
+
+  const recurrings = recurringsResult.rows;
 
   const start = new Date(params.cycle.start_date + "T00:00:00");
   const end = new Date(params.cycle.end_date + "T00:00:00");
@@ -198,9 +199,9 @@ async function insertRecurringTransactionsForCycle(params: {
     for (const dateISO of dates) {
       await pool.query(
         `INSERT INTO transactions (user_id, budget_id, cycle_id, category_id, type, description, amount, date, source, unique_key)
-         VALUES (?, ?, ?, ?, 'expense', ?, ?, ?, 'recurring',
-                 CONCAT('recurring:', ?, ':cycle:', ?, ':date:', ?))
-         ON DUPLICATE KEY UPDATE id = id`,
+         VALUES ($1, $2, $3, $4, 'expense', $5, $6, $7, 'recurring',
+                 'recurring:' || $8 || ':cycle:' || $9 || ':date:' || $10)
+         ON CONFLICT (unique_key) DO NOTHING`,
         [
           params.userId,
           params.budgetId,
@@ -209,8 +210,8 @@ async function insertRecurringTransactionsForCycle(params: {
           r.name,
           r.amount,
           dateISO,
-          r.id,
-          params.cycle.id,
+          r.id.toString(),
+          params.cycle.id.toString(),
           dateISO,
         ]
       );

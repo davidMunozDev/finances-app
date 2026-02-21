@@ -3,14 +3,14 @@ import type { DBRow, DBResult } from "../types/db.types";
 import type { CategoryRow } from "../types/category.types";
 
 export async function findUserCategoryById(userId: number, id: number) {
-  const [rows] = await pool.query<DBRow<CategoryRow>[]>(
+  const result = await pool.query<CategoryRow>(
     `SELECT id, user_id, name, icon
      FROM categories
-     WHERE id = ? AND user_id = ?
+     WHERE id = $1 AND user_id = $2
      LIMIT 1`,
     [id, userId]
   );
-  return rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 export async function existsUserCategoryName(
@@ -18,11 +18,11 @@ export async function existsUserCategoryName(
   name: string,
   excludeId: number
 ) {
-  const [rows] = await pool.query<DBRow<{ id: number }>[]>(
-    `SELECT id FROM categories WHERE user_id = ? AND name = ? AND id <> ? LIMIT 1`,
+  const result = await pool.query<{ id: number }>(
+    `SELECT id FROM categories WHERE user_id = $1 AND name = $2 AND id <> $3 LIMIT 1`,
     [userId, name, excludeId]
   );
-  return rows.length > 0;
+  return result.rows.length > 0;
 }
 
 export async function updateUserCategory(params: {
@@ -33,14 +33,15 @@ export async function updateUserCategory(params: {
 }) {
   const fields: string[] = [];
   const values: Array<string | number | null> = [];
+  let paramIndex = 1;
 
   if (params.name !== undefined) {
-    fields.push("name = ?");
+    fields.push(`name = $${paramIndex++}`);
     values.push(params.name);
   }
 
   if (params.icon !== undefined) {
-    fields.push("icon = ?");
+    fields.push(`icon = $${paramIndex++}`);
     values.push(params.icon);
   }
 
@@ -48,10 +49,10 @@ export async function updateUserCategory(params: {
 
   values.push(params.id, params.userId);
 
-  await pool.query<DBResult>(
+  await pool.query(
     `UPDATE categories
      SET ${fields.join(", ")}
-     WHERE id = ? AND user_id = ?`,
+     WHERE id = $${paramIndex++} AND user_id = $${paramIndex}`,
     values
   );
 
@@ -59,14 +60,14 @@ export async function updateUserCategory(params: {
 }
 
 export async function listCategories(userId: number) {
-  const [rows] = await pool.query<DBRow<CategoryRow>[]>(
+  const result = await pool.query<CategoryRow>(
     `SELECT id, user_id, name, icon
      FROM categories
-     WHERE user_id IS NULL OR user_id = ?
+     WHERE user_id IS NULL OR user_id = $1
      ORDER BY user_id IS NOT NULL DESC, name ASC`,
     [userId]
   );
-  return rows;
+  return result.rows;
 }
 
 export async function createCategory(
@@ -75,40 +76,42 @@ export async function createCategory(
   icon?: string
 ) {
   // Evitar duplicados por usuario (mismo nombre)
-  const [existing] = await pool.query<DBRow<{ id: number }>[]>(
-    `SELECT id FROM categories WHERE user_id = ? AND name = ? LIMIT 1`,
+  const existing = await pool.query<{ id: number }>(
+    `SELECT id FROM categories WHERE user_id = $1 AND name = $2 LIMIT 1`,
     [userId, name]
   );
 
-  if (existing.length) return { conflict: true as const, id: existing[0].id };
+  if (existing.rows.length)
+    return { conflict: true as const, id: existing.rows[0].id };
 
-  const [result] = await pool.query<DBResult>(
+  const result = await pool.query<{ id: number }>(
     `INSERT INTO categories (user_id, name, icon)
-     VALUES (?, ?, ?)`,
+     VALUES ($1, $2, $3)
+     RETURNING id`,
     [userId, name, icon ?? null]
   );
 
-  return { conflict: false as const, id: result.insertId };
+  return { conflict: false as const, id: result.rows[0].id };
 }
 
 export async function getCategoryById(id: number) {
-  const [rows] = await pool.query<DBRow<CategoryRow>[]>(
+  const result = await pool.query<CategoryRow>(
     `SELECT id, user_id, name, icon
      FROM categories
-     WHERE id = ?
+     WHERE id = $1
      LIMIT 1`,
     [id]
   );
-  return rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 export async function deleteCategory(userId: number, id: number) {
   // Solo categorías del usuario (no globales)
-  const [result] = await pool.query<DBResult>(
+  const result = await pool.query(
     `DELETE FROM categories
-     WHERE id = ? AND user_id = ?`,
+     WHERE id = $1 AND user_id = $2`,
     [id, userId]
   );
 
-  return result.affectedRows > 0;
+  return (result.rowCount ?? 0) > 0;
 }
