@@ -60,7 +60,7 @@ async function storeRefreshToken(params: {
   await pool.query(
     `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
      VALUES ($1, $2, $3)`,
-    [params.userId, params.tokenHash, params.expiresAt]
+    [params.userId, params.tokenHash, params.expiresAt],
   );
 }
 
@@ -76,7 +76,7 @@ async function findRefreshToken(tokenHash: string) {
      FROM refresh_tokens
      WHERE token_hash = $1
      LIMIT 1`,
-    [tokenHash]
+    [tokenHash],
   );
 
   return result.rows[0] ?? null;
@@ -90,7 +90,7 @@ async function rotateRefreshToken(params: {
     `UPDATE refresh_tokens
      SET revoked_at = CURRENT_TIMESTAMP, replaced_by_token_hash = $1
      WHERE token_hash = $2 AND revoked_at IS NULL`,
-    [params.newHash, params.oldHash]
+    [params.newHash, params.oldHash],
   );
 }
 
@@ -99,7 +99,7 @@ async function revokeRefreshToken(tokenHash: string) {
     `UPDATE refresh_tokens
      SET revoked_at = CURRENT_TIMESTAMP
      WHERE token_hash = $1 AND revoked_at IS NULL`,
-    [tokenHash]
+    [tokenHash],
   );
 }
 
@@ -122,7 +122,7 @@ export async function register(req: Request, res: Response) {
 
   const existing = await pool.query<Pick<UserRow, "id">>(
     "SELECT id FROM users WHERE email = $1 LIMIT 1",
-    [email]
+    [email],
   );
 
   if (existing.rows.length) {
@@ -139,7 +139,7 @@ export async function register(req: Request, res: Response) {
     `INSERT INTO users (email, password_hash, full_name, default_currency)
      VALUES ($1, $2, $3, $4)
      RETURNING id`,
-    [email, password_hash, full_name ?? null, default_currency ?? "EUR"]
+    [email, password_hash, full_name ?? null, default_currency ?? "EUR"],
   );
 
   const userId = result.rows[0].id;
@@ -187,7 +187,7 @@ export async function login(req: Request, res: Response) {
      FROM users
      WHERE email = $1
      LIMIT 1`,
-    [email]
+    [email],
   );
 
   if (!result.rows.length) {
@@ -321,7 +321,7 @@ export async function me(req: AuthRequest, res: Response) {
 
   const result = await pool.query<Omit<UserRow, "password_hash">>(
     "SELECT id, email, full_name, default_currency, onboarding_completed, created_at FROM users WHERE id = $1",
-    [userId]
+    [userId],
   );
 
   if (!result.rows.length) {
@@ -339,7 +339,7 @@ export async function me(req: AuthRequest, res: Response) {
   });
 }
 
-// DELETE /auth/user
+// DELETE /auth/delete
 export async function deleteUser(req: AuthRequest, res: Response) {
   const userId = req.user?.id;
   if (!userId) {
@@ -350,27 +350,75 @@ export async function deleteUser(req: AuthRequest, res: Response) {
     });
   }
 
-  // Opcional: revocar todos los refresh tokens del usuario (si tienes endpoint)
-  await pool.query(
-    `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP
-     WHERE user_id = $1 AND revoked_at IS NULL`,
-    [userId]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  const result = await pool.query("DELETE FROM users WHERE id = $1", [userId]);
+    // 1. Revocar refresh tokens
+    await client.query(
+      `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP
+       WHERE user_id = $1 AND revoked_at IS NULL`,
+      [userId],
+    );
 
-  if ((result.rowCount ?? 0) === 0) {
-    throw new AppError({
-      status: HTTP_STATUS.NOT_FOUND,
-      code: ERROR_CODES.NOT_FOUND,
-      message: "Usuario no encontrado",
-    });
+    // 2. Eliminar transacciones del usuario
+    await client.query(`DELETE FROM transactions WHERE user_id = $1`, [userId]);
+
+    // 3. Eliminar provisions y recurring (tienen ON DELETE RESTRICT sobre categories)
+    await client.query(
+      `DELETE FROM budget_provisions
+       WHERE budget_id IN (SELECT id FROM budgets WHERE user_id = $1)`,
+      [userId],
+    );
+    await client.query(
+      `DELETE FROM budget_recurring_expenses
+       WHERE budget_id IN (SELECT id FROM budgets WHERE user_id = $1)`,
+      [userId],
+    );
+
+    // 4. Eliminar ciclos de presupuesto
+    await client.query(
+      `DELETE FROM budget_cycles
+       WHERE budget_id IN (SELECT id FROM budgets WHERE user_id = $1)`,
+      [userId],
+    );
+
+    // 5. Eliminar presupuestos
+    await client.query(`DELETE FROM budgets WHERE user_id = $1`, [userId]);
+
+    // 6. Eliminar categorías del usuario
+    await client.query(`DELETE FROM categories WHERE user_id = $1`, [userId]);
+
+    // 7. Eliminar refresh tokens
+    await client.query(`DELETE FROM refresh_tokens WHERE user_id = $1`, [
+      userId,
+    ]);
+
+    // 8. Eliminar usuario
+    const result = await client.query("DELETE FROM users WHERE id = $1", [
+      userId,
+    ]);
+
+    if ((result.rowCount ?? 0) === 0) {
+      throw new AppError({
+        status: HTTP_STATUS.NOT_FOUND,
+        code: ERROR_CODES.NOT_FOUND,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    await client.query("COMMIT");
+
+    // Limpiar cookie
+    res.clearCookie("refresh_token", { path: "/auth/refresh" });
+
+    return res.json({ message: "Usuario eliminado correctamente" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
   }
-
-  // Limpiar cookie por si acaso
-  res.clearCookie("refresh_token", { path: "/auth/refresh" });
-
-  return res.json({ message: "Usuario eliminado correctamente" });
 }
 
 // PATCH /auth/onboarding
@@ -401,7 +449,7 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
     // 1. Actualizar datos del usuario
     await client.query(
       "UPDATE users SET full_name = $1, default_currency = $2 WHERE id = $3",
-      [data.user.full_name, data.user.default_currency, userId]
+      [data.user.full_name, data.user.default_currency, userId],
     );
 
     // 2. Crear presupuesto
@@ -418,7 +466,7 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
         data.budget.reset_dom ?? null,
         data.budget.reset_month ?? null,
         data.budget.reset_day ?? null,
-      ]
+      ],
     );
     const budgetId = budgetResult.rows[0].id;
 
@@ -430,7 +478,7 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
         `SELECT id FROM categories 
          WHERE name = $1 AND (user_id IS NULL OR user_id = $2)
          LIMIT 1`,
-        [cat.name, userId]
+        [cat.name, userId],
       );
 
       let categoryId: number;
@@ -441,7 +489,7 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
         // Create new user-specific category
         const catResult = await client.query<{ id: number }>(
           "INSERT INTO categories (user_id, name, icon) VALUES ($1, $2, $3) RETURNING id",
-          [userId, cat.name, cat.icon ?? null]
+          [userId, cat.name, cat.icon ?? null],
         );
         categoryId = catResult.rows[0].id;
       }
@@ -462,14 +510,14 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
       await client.query(
         `INSERT INTO budget_provisions (budget_id, category_id, name, amount)
          VALUES ($1, $2, $3, $4)`,
-        [budgetId, categoryId, provision.name, provision.amount]
+        [budgetId, categoryId, provision.name, provision.amount],
       );
     }
 
     // 5. Marcar onboarding como completado
     await client.query(
       "UPDATE users SET onboarding_completed = TRUE WHERE id = $1",
-      [userId]
+      [userId],
     );
 
     await client.query("COMMIT");
@@ -490,7 +538,14 @@ export async function completeOnboarding(req: AuthRequest, res: Response) {
       await pool.query(
         `INSERT INTO transactions (user_id, budget_id, cycle_id, category_id, type, description, amount, date, source)
          VALUES ($1, $2, $3, NULL, 'income', $4, $5, $6, 'manual')`,
-        [userId, budgetId, cycle.id, income.description, income.amount, dateISO]
+        [
+          userId,
+          budgetId,
+          cycle.id,
+          income.description,
+          income.amount,
+          dateISO,
+        ],
       );
     }
 
