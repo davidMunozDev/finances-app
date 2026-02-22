@@ -179,12 +179,10 @@ export async function processFile(req: AuthRequest, res: Response) {
   let textContent = content;
   if (format === "pdf") {
     try {
-      const { PDFParse } = await import("pdf-parse");
+      const pdfParse = (await import("pdf-parse")).default;
       const pdfBuffer = Buffer.from(content, "base64");
-      const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
-      const textResult = await parser.getText();
-      textContent = textResult.text;
-      await parser.destroy();
+      const pdfData = await pdfParse(pdfBuffer);
+      textContent = pdfData.text;
     } catch {
       throw new AppError({
         status: HTTP_STATUS.BAD_REQUEST,
