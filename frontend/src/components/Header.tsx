@@ -4,9 +4,29 @@ import { AppBar, Toolbar, IconButton, Box, Avatar } from "@mui/material";
 import BudgetSelector from "./BudgetSelector";
 import SettingsModal from "./SettingsModal";
 import { useState } from "react";
+import { useCurrentUser } from "@/data/auth/hooks";
+
+function getInitials(
+  user: { full_name?: string | null; email?: string } | undefined,
+) {
+  if (user?.full_name) {
+    return user.full_name
+      .split(" ")
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+  if (user?.email) {
+    return user.email[0].toUpperCase();
+  }
+  return "?";
+}
 
 export default function Header() {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { user } = useCurrentUser();
+  const initials = getInitials(user);
 
   return (
     <AppBar
@@ -49,7 +69,7 @@ export default function Header() {
               fontWeight: 600,
             }}
           >
-            DM
+            {initials}
           </Avatar>
         </IconButton>
       </Toolbar>
