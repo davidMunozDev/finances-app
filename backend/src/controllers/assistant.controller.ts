@@ -19,7 +19,6 @@ import {
 import { invalidateCache } from "../services/assistant-datasets.service";
 import { listCategories } from "../services/categories.service";
 import { ProcessFileSchema } from "../validators/import.validator";
-import { PDFParse } from "pdf-parse";
 
 /**
  * POST /assistant/query
@@ -180,6 +179,7 @@ export async function processFile(req: AuthRequest, res: Response) {
   let textContent = content;
   if (format === "pdf") {
     try {
+      const { PDFParse } = await import("pdf-parse");
       const pdfBuffer = Buffer.from(content, "base64");
       const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
       const textResult = await parser.getText();
