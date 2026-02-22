@@ -18,7 +18,7 @@ router.post("/login", asyncHandler(login));
 router.post("/logout", authMiddleware, asyncHandler(logout));
 router.get("/me", authMiddleware, asyncHandler(me));
 router.delete("/delete", authMiddleware, asyncHandler(deleteUser));
-router.post("/auth/refresh", asyncHandler(refresh));
+router.post("/refresh", asyncHandler(refresh));
 router.patch("/onboarding", authMiddleware, asyncHandler(completeOnboarding));
 
 export default router;

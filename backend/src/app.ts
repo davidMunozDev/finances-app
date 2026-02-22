@@ -5,6 +5,7 @@ import swaggerUi from "swagger-ui-express";
 // @ts-ignore
 import YAML from "yamljs";
 import path from "path";
+import fs from "fs";
 
 import authRoutes from "./routes/auth.routes";
 import budgetsRoutes from "./routes/budgets.routes";
@@ -23,9 +24,26 @@ import cookieParser from "cookie-parser";
 dotenv.config();
 
 const app = express();
-const swaggerDocument = YAML.load(path.join(__dirname, "..", "api.yaml"));
 
-app.use(cors());
+// --- CORS ---
+const allowedOrigins = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: allowedOrigins.length
+      ? (origin, cb) => {
+          if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+          cb(new Error("CORS not allowed"));
+        }
+      : true,
+    credentials: true,
+  }),
+);
+
+app.use(cookieParser());
 app.use(express.json({ limit: "4mb" }));
 app.use(validateBody);
 
@@ -33,7 +51,23 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// --- Swagger (safe load) ---
+let swaggerDocument: any = null;
+try {
+  const yamlPath = path.join(__dirname, "..", "api.yaml");
+  if (fs.existsSync(yamlPath)) {
+    swaggerDocument = YAML.load(yamlPath);
+  }
+} catch (err) {
+  console.warn(
+    "⚠️  No se pudo cargar api.yaml para Swagger:",
+    (err as Error).message,
+  );
+}
+
+if (swaggerDocument) {
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+}
 app.use("/auth", authRoutes);
 app.use("/budgets", budgetsRoutes);
 app.use("/", provisionsRoutes);
@@ -44,7 +78,6 @@ app.use("/", categoriesRoutes);
 app.use("/", incomesRoutes);
 app.use("/assistant", assistantRoutes);
 
-app.use(cookieParser());
 app.use(errorMiddleware);
 
 // Para desarrollo local

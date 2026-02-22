@@ -7,7 +7,7 @@ export function errorMiddleware(
   err: unknown,
   _req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ) {
   // Errores controlados (AppError)
   if (err instanceof AppError) {
@@ -15,6 +15,19 @@ export function errorMiddleware(
       code: err.code,
       message: err.message,
       details: err.details ?? null,
+    });
+  }
+
+  // Errores de body-parser (JSON inválido, etc.)
+  if (
+    err instanceof SyntaxError &&
+    "status" in err &&
+    (err as any).status === 400
+  ) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "JSON inválido en el body de la petición",
+      details: null,
     });
   }
 
